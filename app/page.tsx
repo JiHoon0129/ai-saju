@@ -242,7 +242,8 @@ export default function Home() {
               <button
                 onClick={startAnalysis}
                 disabled={loading}
-                className="mt-2 w-full rounded-2xl bg-purple-600 px-6 py-4 text-lg font-bold transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-2 w-full rounded-2xl bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 px-6 py-4 text-lg font-bold shadow-lg shadow-purple-900/30 transition hover:scale-[1.02] hover:from-purple-500 hover:via-violet-500 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+            
               >
                 {loading
                   ? "🔮 사주를 분석하고 있습니다..."
@@ -273,6 +274,7 @@ export default function Home() {
               입력하신 생년월일과 태어난 시간을 바탕으로
               <br />
               전통 사주 해석을 참고하여 AI가 분석한 결과입니다.
+              
             </p>
 
           </div>
