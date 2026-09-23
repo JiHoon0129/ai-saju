@@ -128,9 +128,7 @@ export default function Home() {
               🔮
             </div>
 
-            <h1 className="mb-4 text-4xl font-bold">
-              AI 사주
-            </h1>
+           <h1 className="mb-4 text-5xl font-extrabold tracking-tight bg-gradient-to-r from-purple-300 via-white to-purple-400 bg-clip-text text-transparent">AI 사주</h1>
 
             <p className="mb-3 text-xl font-semibold">
               당신의 운명을 읽어드립니다
