@@ -190,6 +190,6 @@ export default function Home() {
             <div className="mt-10 rounded-[28px] border border-white/10 bg-white/[0.045] p-3 shadow-2xl shadow-black/30 backdrop-blur-xl">
 
               <button
-                onClick={() => setStep("input")}
-                className="group w-full rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-5 text-lg font-bold shadow-lg shadow-purple-900/30 transition duration-300 hover:-translate-y-0
+  onClick={() => setStep("input")}
+  className="group w-full rounded-2xl bg-purple-600 px-6 py-5 text-lg font-bold shadow-lg shadow-purple-900/30 transition hover:bg-purple-500"-lg shadow-purple-900/30 transition duration-300 hover:-translate-y-0
               
