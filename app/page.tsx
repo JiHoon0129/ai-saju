@@ -117,7 +117,7 @@ export default function Home() {
   const leastElement = [...elements].sort((a, b) => a.value - b.value)[0];
 
   return (
-    <main className="min-h-screen bg-[#0f0d1a] text-white">
+    <main className="min-h-screen bg-gradient-to-b from-[#0b0914] via-[#151025] to-[#09070f] text-white">
 
       {/* 첫 화면 */}
       {step === "home" && (
