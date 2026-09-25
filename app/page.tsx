@@ -121,38 +121,150 @@ export default function Home() {
 
       {/* 첫 화면 */}
       {step === "home" && (
-        <section className="flex min-h-screen items-center justify-center px-6">
-          <div className="w-full max-w-md text-center">
+        <section
+          className="relative min-h-screen overflow-hidden bg-[#090b12]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(4,7,14,0.58), rgba(4,7,14,0.78)), url('/ai-saju-hero-bg.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          {/* 은은한 별빛 */}
+          <div className="pointer-events-none absolute inset-0 opacity-70">
+            <div className="absolute left-[12%] top-[16%] h-1 w-1 rounded-full bg-[#f6d78b] shadow-[0_0_14px_4px_rgba(246,215,139,0.35)]" />
+            <div className="absolute right-[18%] top-[12%] h-1.5 w-1.5 rounded-full bg-[#fff3c4] shadow-[0_0_18px_5px_rgba(255,243,196,0.28)]" />
+            <div className="absolute left-[26%] top-[28%] h-1 w-1 rounded-full bg-[#fff3c4]" />
+            <div className="absolute right-[30%] top-[24%] h-1 w-1 rounded-full bg-[#f6d78b]" />
+          </div>
 
-            <div className="mb-8 text-6xl">
-              🔮
+          {/* 상단 네비게이션 */}
+          <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 lg:px-10">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[#d9aa4d]/60 bg-black/20 text-xl text-[#f4cf7a] backdrop-blur-sm">
+                ☯
+              </div>
+              <span className="text-2xl font-semibold tracking-wide text-[#f4cf7a]">
+                AI 사주
+              </span>
             </div>
 
-            <h1 className="mb-4 text-4xl font-bold">
+            <nav className="hidden items-center gap-8 text-sm text-gray-200 sm:flex">
+              <button className="transition hover:text-[#f4cf7a]">서비스 소개</button>
+              <button className="transition hover:text-[#f4cf7a]">이용안내</button>
+              <button className="transition hover:text-[#f4cf7a]">고객센터</button>
+            </nav>
+          </header>
+
+          {/* 중앙 히어로 */}
+          <div className="relative z-10 mx-auto flex min-h-[calc(100vh-89px)] w-full max-w-6xl flex-col items-center px-6 pb-14 pt-12 text-center lg:px-10 lg:pt-16">
+            <div className="mb-5 flex items-center gap-3 text-sm font-medium tracking-[0.2em] text-[#f0c86d]">
+              <span className="h-px w-12 bg-[#d9aa4d]/70" />
+              <span>AI가 풀어주는 당신의 운명</span>
+              <span className="h-px w-12 bg-[#d9aa4d]/70" />
+            </div>
+
+            <h1 className="text-6xl font-semibold tracking-tight text-[#f7dc9a] drop-shadow-[0_4px_24px_rgba(0,0,0,0.6)] sm:text-7xl lg:text-8xl">
               AI 사주
             </h1>
 
-            <p className="mb-3 text-xl font-semibold">
-              당신의 운명을 읽어드립니다
+            <p className="mt-6 text-2xl font-medium leading-relaxed text-white sm:text-3xl">
+              당신의 사주에 담긴
+              <br />
+              인생의 이야기를 확인해보세요.
             </p>
 
-            <p className="mb-10 text-sm leading-7 text-gray-400">
+            <p className="mt-5 max-w-xl text-sm leading-7 text-gray-300 sm:text-base">
               생년월일과 태어난 시간을 입력하면
               <br />
               AI가 당신의 사주를 알기 쉽게 분석해드립니다.
             </p>
 
-            <button
-              onClick={() => setStep("input")}
-              className="w-full rounded-2xl bg-purple-600 px-6 py-4 text-lg font-bold transition hover:bg-purple-500"
-            >
-              사주 분석 시작하기
-            </button>
+            {/* 기존 기능을 유지하는 입력 카드 */}
+            <div className="mt-10 w-full max-w-2xl rounded-[28px] border border-[#d9aa4d]/50 bg-[#090d16]/80 p-5 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-7">
+              <div className="grid gap-5 text-left sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label className="mb-2 block text-sm font-semibold text-[#f1d58d]">
+                    생년월일
+                  </label>
+                  <input
+                    type="date"
+                    value={birthDate}
+                    onChange={(e) => setBirthDate(e.target.value)}
+                    className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-4 text-white outline-none transition focus:border-[#d9aa4d] focus:bg-white/10"
+                  />
+                </div>
 
-            <p className="mt-6 text-xs text-gray-500">
-              AI 사주는 재미와 참고를 위한 서비스입니다.
-            </p>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-[#f1d58d]">
+                    태어난 시간
+                  </label>
+                  <input
+                    type="time"
+                    value={birthTime}
+                    onChange={(e) => setBirthTime(e.target.value)}
+                    className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-4 text-white outline-none transition focus:border-[#d9aa4d] focus:bg-white/10"
+                  />
+                </div>
 
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-[#f1d58d]">
+                    성별
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setGender("남성")}
+                      className={`rounded-xl border px-4 py-4 font-medium transition ${
+                        gender === "남성"
+                          ? "border-[#d9aa4d] bg-[#d9aa4d] text-[#17110a]"
+                          : "border-white/15 bg-white/5 text-gray-300 hover:bg-white/10"
+                      }`}
+                    >
+                      남성
+                    </button>
+                    <button
+                      onClick={() => setGender("여성")}
+                      className={`rounded-xl border px-4 py-4 font-medium transition ${
+                        gender === "여성"
+                          ? "border-[#d9aa4d] bg-[#d9aa4d] text-[#17110a]"
+                          : "border-white/15 bg-white/5 text-gray-300 hover:bg-white/10"
+                      }`}
+                    >
+                      여성
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={startAnalysis}
+                disabled={loading}
+                className="mt-6 w-full rounded-full bg-gradient-to-r from-[#d7a943] via-[#f3d17c] to-[#d7a943] px-6 py-4 text-lg font-bold text-[#1a1308] shadow-[0_8px_30px_rgba(215,169,67,0.22)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? "🔮 사주를 분석하고 있습니다..." : "사주 분석 시작하기  →"}
+              </button>
+
+              <p className="mt-4 text-xs text-gray-500">
+                AI 사주는 재미와 참고를 위한 서비스입니다.
+              </p>
+            </div>
+
+            {/* 핵심 장점 */}
+            <div className="mt-12 grid w-full max-w-4xl grid-cols-2 gap-5 border-t border-white/10 pt-8 sm:grid-cols-4">
+              {[
+                ["✦", "정확한 사주 분석"],
+                ["◈", "AI가 전하는 맞춤 해석"],
+                ["▤", "쉽고 자세한 풀이"],
+                ["♙", "개인정보 보호"],
+              ].map(([icon, title]) => (
+                <div key={title} className="text-center">
+                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-[#d9aa4d]/60 text-xl text-[#f1cf7b]">
+                    {icon}
+                  </div>
+                  <p className="text-sm font-semibold text-white">{title}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}
