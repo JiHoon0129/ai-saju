@@ -23,6 +23,7 @@ export default function Home() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [paid, setPaid] = useState(false);
 
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("");
@@ -89,6 +90,7 @@ export default function Home() {
 
   const resetInput = () => {
     setStep("input");
+    setPaid(false);
     setAnalysis("");
     setFourPillars({
       year: "",
@@ -578,10 +580,14 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Free result */}
             <div className="mb-5 rounded-[26px] border border-[#d8b46a]/20 bg-white/[0.035] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.18)] sm:p-6">
               <div className="mb-5 flex items-center justify-between">
-                <p className="text-sm font-semibold text-[#e7c982]">🧠 AI 분석 내용</p>
-                <span className="rounded-full border border-[#d8b46a]/20 bg-[#d8b46a]/[0.05] px-3 py-1 text-[10px] text-[#d8b46a]">
+                <div>
+                  <p className="text-sm font-semibold text-[#e7c982]">🧠 AI 분석 내용</p>
+                  <p className="mt-1 text-xs text-white/35">기본 분석 결과</p>
+                </div>
+                <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] text-white/45">
                   FREE
                 </span>
               </div>
@@ -590,6 +596,7 @@ export default function Home() {
                 {analysis
                   .split(/(?=#\s*\d+\.)/)
                   .filter((section) => section.trim())
+                  .slice(0, 3)
                   .map((section, index) => {
                     const lines = section.trim().split("\n");
                     const title =
@@ -611,6 +618,126 @@ export default function Home() {
                     );
                   })}
               </div>
+
+              {!paid && (
+                <div className="mt-5 rounded-2xl border border-[#d8b46a]/25 bg-gradient-to-b from-[#d8b46a]/[0.08] to-transparent p-5 sm:p-6">
+                  <div className="mb-4 flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#d8b46a]/30 bg-[#d8b46a]/10 text-lg">
+                      ✦
+                    </div>
+                    <div>
+                      <p className="font-semibold text-[#f0d18a]">
+                        더 깊은 사주 분석을 확인해보세요
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-white/45">
+                        재물운, 직업운, 연애운, 대인관계와 시기별 흐름까지
+                        상세하게 확인할 수 있습니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs text-white/55 sm:grid-cols-3">
+                    {["종합 사주", "재물운", "직업운", "연애운", "대인관계", "시기별 흐름"].map(
+                      (item) => (
+                        <div
+                          key={item}
+                          className="rounded-xl border border-white/[0.06] bg-black/10 px-3 py-3"
+                        >
+                          🔒 {item}
+                        </div>
+                      )
+                    )}
+                  </div>
+
+                  <div className="mt-5 rounded-2xl border border-[#d8b46a]/20 bg-[#080e17]/80 p-4 text-center">
+                    <p className="text-[10px] tracking-[0.2em] text-[#d8b46a]">
+                      PREMIUM SAJU
+                    </p>
+                    <p className="mt-2 text-xl font-semibold text-white">
+                      상세 사주 분석
+                    </p>
+                    <p className="mt-2 text-xs text-white/40">
+                      실제 결제 연동 전 테스트 화면입니다.
+                    </p>
+                    <button
+                      onClick={() => setPaid(true)}
+                      className="mt-4 w-full rounded-2xl bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-5 py-4 font-bold text-[#171107] shadow-[0_12px_35px_rgba(199,155,67,0.18)] transition hover:brightness-105"
+                    >
+                      테스트 결제로 상세 결과 열기
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Premium result */}
+            {paid && (
+              <div className="mb-5 rounded-[26px] border border-[#d8b46a]/35 bg-gradient-to-b from-[#d8b46a]/[0.09] to-white/[0.025] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.2)] sm:p-6">
+                <div className="mb-6 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold tracking-[0.2em] text-[#d8b46a]">
+                      PREMIUM SAJU
+                    </p>
+                    <h3 className="mt-2 text-2xl font-semibold text-white">
+                      상세 사주 분석
+                    </h3>
+                  </div>
+                  <span className="rounded-full border border-[#d8b46a]/30 bg-[#d8b46a]/10 px-3 py-1 text-[10px] font-semibold text-[#e7c982]">
+                    UNLOCKED
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {[
+                    {
+                      title: "🌙 종합 사주",
+                      desc: `현재 확인된 사주 원국과 오행 분포를 기준으로 전체적인 성향과 흐름을 정리하는 영역입니다. 핵심 오행은 ${mostElement.name}, 상대적으로 적은 오행은 ${leastElement.name}으로 표시됩니다.`,
+                    },
+                    {
+                      title: "💰 재물운",
+                      desc: "재물과 관련된 성향, 소비·저축 습관을 바라보는 관점과 앞으로 참고할 수 있는 포인트를 제공하는 영역입니다.",
+                    },
+                    {
+                      title: "💼 직업운",
+                      desc: "업무 성향과 조직생활, 자신의 강점을 활용할 수 있는 환경을 살펴보는 영역입니다.",
+                    },
+                    {
+                      title: "❤️ 연애·대인관계",
+                      desc: "관계에서 나타나는 성향과 소통 방식, 대인관계에서 참고할 수 있는 특징을 정리하는 영역입니다.",
+                    },
+                    {
+                      title: "📈 시기별 흐름",
+                      desc: "현재와 앞으로의 흐름을 시기별로 나누어 확인할 수 있도록 구성하는 영역입니다.",
+                    },
+                    {
+                      title: "🌿 오행 상세 분석",
+                      desc: `목·화·토·금·수의 분포를 바탕으로 균형을 참고하는 영역입니다. 현재 가장 많은 오행은 ${mostElement.name}, 가장 적은 오행은 ${leastElement.name}입니다.`,
+                    },
+                  ].map((item) => (
+                    <div
+                      key={item.title}
+                      className="rounded-2xl border border-white/[0.06] bg-[#0a1019] p-5"
+                    >
+                      <h4 className="text-base font-bold text-[#f0d18a]">
+                        {item.title}
+                      </h4>
+                      <p className="mt-2 text-sm leading-7 text-white/60">
+                        {item.desc}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-5 rounded-2xl border border-[#d8b46a]/15 bg-[#d8b46a]/[0.04] p-4 text-xs leading-6 text-white/35">
+                  ※ 현재는 유료 기능의 화면과 흐름을 먼저 구성한 테스트 단계입니다.
+                  실제 결제 후 개인별 상세 AI 해석을 제공하려면 결제 시스템과
+                  상세 분석 API를 다음 단계에서 연결합니다.
+                </div>
+              </div>
+            )}
+
+            <div className="mb-5 rounded-2xl border border-white/[0.05] bg-white/[0.02] p-4 text-center text-[11px] leading-5 text-white/30">
+              AI 사주는 전통 사주 해석을 참고한 콘텐츠로, 중요한 의사결정의 유일한 근거로 사용하지 마세요.
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
