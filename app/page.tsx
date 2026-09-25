@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Home() {
   const [step, setStep] = useState<"home" | "input" | "result" | "service" | "guide" | "support" | "checkout" | "legal">("home");
@@ -24,6 +25,10 @@ export default function Home() {
 
   const [loading, setLoading] = useState(false);
   const [paid, setPaid] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [premiumLoading, setPremiumLoading] = useState(false);
+  const [premiumAnalysis, setPremiumAnalysis] = useState("");
+  const [paymentError, setPaymentError] = useState("");
   const [legalPage, setLegalPage] = useState<"terms" | "privacy" | "refund" | "business">("terms");
 
   const [birthDate, setBirthDate] = useState("");
@@ -93,6 +98,8 @@ export default function Home() {
     setStep("input");
     setPaid(false);
     setAnalysis("");
+    setPremiumAnalysis("");
+    setPaymentError("");
     setFourPillars({
       year: "",
       month: "",
@@ -118,6 +125,110 @@ export default function Home() {
 
   const mostElement = [...elements].sort((a, b) => b.value - a.value)[0];
   const leastElement = [...elements].sort((a, b) => a.value - b.value)[0];
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get("payment");
+
+    if (paymentStatus !== "success" && paymentStatus !== "fail") {
+      return;
+    }
+
+    const handlePaymentResult = async () => {
+      if (paymentStatus === "fail") {
+        setPaymentError(
+          params.get("message") || "결제가 취소되었거나 실패했습니다."
+        );
+        setStep("checkout");
+        window.history.replaceState({}, "", window.location.pathname);
+        return;
+      }
+
+      const paymentKey = params.get("paymentKey");
+      const orderId = params.get("orderId");
+      const amount = Number(params.get("amount"));
+
+      if (!paymentKey || !orderId || !amount) {
+        setPaymentError("결제 결과 정보가 올바르지 않습니다.");
+        setStep("checkout");
+        window.history.replaceState({}, "", window.location.pathname);
+        return;
+      }
+
+      try {
+        setPremiumLoading(true);
+
+        const saved = sessionStorage.getItem("saju_payment_order");
+        const order = saved ? JSON.parse(saved) : null;
+
+        if (!order || order.orderId !== orderId || order.amount !== amount) {
+          throw new Error("주문 정보 검증에 실패했습니다.");
+        }
+
+        const confirmResponse = await fetch("/api/payment/confirm", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            paymentKey,
+            orderId,
+            amount,
+          }),
+        });
+
+        const confirmData = await confirmResponse.json();
+
+        if (!confirmResponse.ok) {
+          throw new Error(
+            confirmData.error || "결제 승인에 실패했습니다."
+          );
+        }
+
+        const premiumResponse = await fetch("/api/premium-saju", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            birthDate: order.birthDate,
+            birthTime: order.birthTime,
+            gender: order.gender,
+            paymentKey,
+            orderId,
+          }),
+        });
+
+        const premiumData = await premiumResponse.json();
+
+        if (!premiumResponse.ok) {
+          throw new Error(
+            premiumData.error || "상세 사주 분석 생성에 실패했습니다."
+          );
+        }
+
+        setPremiumAnalysis(premiumData.result || "");
+        setPaid(true);
+        setStep("result");
+
+        sessionStorage.removeItem("saju_payment_order");
+        window.history.replaceState({}, "", window.location.pathname);
+      } catch (error) {
+        console.error(error);
+        setPaymentError(
+          error instanceof Error
+            ? error.message
+            : "결제 처리 중 오류가 발생했습니다."
+        );
+        setStep("checkout");
+      } finally {
+        setPremiumLoading(false);
+        setPaymentLoading(false);
+      }
+    };
+
+    void handlePaymentResult();
+  }, []);
 
   return (
     <main className="min-h-screen bg-[#070b13] text-white">
@@ -655,7 +766,7 @@ export default function Home() {
                       상세 사주 분석
                     </p>
                     <p className="mt-2 text-xs text-white/40">
-                      실제 결제 연동 전 테스트 화면입니다.
+                      토스 테스트 결제 환경입니다.
                     </p>
                     <button
                       onClick={() => setStep("checkout")}
@@ -685,53 +796,46 @@ export default function Home() {
                   </span>
                 </div>
 
-                <div className="space-y-3">
-                  {[
-                    {
-                      title: "🌙 종합 사주",
-                      desc: `현재 확인된 사주 원국과 오행 분포를 기준으로 전체적인 성향과 흐름을 정리하는 영역입니다. 핵심 오행은 ${mostElement.name}, 상대적으로 적은 오행은 ${leastElement.name}으로 표시됩니다.`,
-                    },
-                    {
-                      title: "💰 재물운",
-                      desc: "재물과 관련된 성향, 소비·저축 습관을 바라보는 관점과 앞으로 참고할 수 있는 포인트를 제공하는 영역입니다.",
-                    },
-                    {
-                      title: "💼 직업운",
-                      desc: "업무 성향과 조직생활, 자신의 강점을 활용할 수 있는 환경을 살펴보는 영역입니다.",
-                    },
-                    {
-                      title: "❤️ 연애·대인관계",
-                      desc: "관계에서 나타나는 성향과 소통 방식, 대인관계에서 참고할 수 있는 특징을 정리하는 영역입니다.",
-                    },
-                    {
-                      title: "📈 시기별 흐름",
-                      desc: "현재와 앞으로의 흐름을 시기별로 나누어 확인할 수 있도록 구성하는 영역입니다.",
-                    },
-                    {
-                      title: "🌿 오행 상세 분석",
-                      desc: `목·화·토·금·수의 분포를 바탕으로 균형을 참고하는 영역입니다. 현재 가장 많은 오행은 ${mostElement.name}, 가장 적은 오행은 ${leastElement.name}입니다.`,
-                    },
-                  ].map((item) => (
-                    <div
-                      key={item.title}
-                      className="rounded-2xl border border-white/[0.06] bg-[#0a1019] p-5"
-                    >
-                      <h4 className="text-base font-bold text-[#f0d18a]">
-                        {item.title}
-                      </h4>
-                      <p className="mt-2 text-sm leading-7 text-white/60">
-                        {item.desc}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                {premiumLoading ? (
+                  <div className="rounded-2xl border border-white/[0.06] bg-[#0a1019] p-6 text-center">
+                    <p className="text-[#f0d18a]">
+                      🔮 결제 확인 후 상세 AI 사주를 생성하고 있습니다...
+                    </p>
+                  </div>
+                ) : premiumAnalysis ? (
+                  <div className="space-y-3">
+                    {premiumAnalysis
+                      .split(/(?=#\s*\d+\.)/)
+                      .filter((section) => section.trim())
+                      .map((section, index) => {
+                        const lines = section.trim().split("\n");
+                        const title =
+                          lines[0]?.replace(/^#\s*/, "") ||
+                          `상세 분석 ${index + 1}`;
+                        const content = lines.slice(1).join("\n").trim();
 
-                <div className="mt-5 rounded-2xl border border-[#d8b46a]/15 bg-[#d8b46a]/[0.04] p-4 text-xs leading-6 text-white/35">
-                  ※ 현재는 유료 기능의 화면과 흐름을 먼저 구성한 테스트 단계입니다.
-                  실제 결제 후 개인별 상세 AI 해석을 제공하려면 결제 시스템과
-                  상세 분석 API를 다음 단계에서 연결합니다.
-                </div>
-              </div>
+                        return (
+                          <div
+                            key={index}
+                            className="rounded-2xl border border-white/[0.06] bg-[#0a1019] p-5"
+                          >
+                            <h4 className="text-base font-bold text-[#f0d18a]">
+                              {title}
+                            </h4>
+                            <p className="mt-2 whitespace-pre-line text-sm leading-7 text-white/60">
+                              {content}
+                            </p>
+                          </div>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-white/[0.06] bg-[#0a1019] p-5">
+                    <p className="text-sm leading-7 text-white/60">
+                      결제는 완료되었지만 상세 분석 결과를 아직 불러오지 못했습니다.
+                    </p>
+                  </div>
+                )}
             )}
 
             <div className="mb-5 rounded-2xl border border-white/[0.05] bg-white/[0.02] p-4 text-center text-[11px] leading-5 text-white/30">
@@ -838,33 +942,158 @@ export default function Home() {
       {step === "checkout" && (
         <section className="min-h-screen bg-[#070b13] px-5 py-10 sm:px-6 sm:py-14">
           <div className="mx-auto max-w-2xl">
-            <button onClick={() => setStep("result")} className="mb-8 text-sm text-white/45 hover:text-[#e7c982]">← 결과로 돌아가기</button>
+            <button
+              onClick={() => {
+                setPaymentError("");
+                setStep("result");
+              }}
+              className="mb-8 text-sm text-white/45 hover:text-[#e7c982]"
+            >
+              ← 결과로 돌아가기
+            </button>
+
             <div className="mb-8 text-center">
-              <p className="text-xs font-semibold tracking-[0.22em] text-[#d8b46a]">PREMIUM CHECKOUT</p>
-              <h2 className="mt-3 text-3xl font-semibold text-white">상세 사주 분석 결제</h2>
-              <p className="mt-3 text-sm text-white/40">현재는 실제 결제 연동 전 테스트 단계입니다.</p>
+              <p className="text-xs font-semibold tracking-[0.22em] text-[#d8b46a]">
+                PREMIUM CHECKOUT
+              </p>
+              <h2 className="mt-3 text-3xl font-semibold text-white">
+                상세 사주 분석 결제
+              </h2>
+              <p className="mt-3 text-sm text-white/40">
+                테스트 결제 환경입니다. 실제 금액이 청구되지 않습니다.
+              </p>
             </div>
+
             <div className="rounded-[28px] border border-[#d8b46a]/25 bg-white/[0.035] p-6 sm:p-8">
               <div className="flex items-center justify-between border-b border-white/[0.07] pb-5">
-                <div><p className="text-xs text-white/35">상품</p><h3 className="mt-1 text-xl font-semibold text-white">프리미엄 사주 상세 분석</h3></div>
+                <div>
+                  <p className="text-xs text-white/35">상품</p>
+                  <h3 className="mt-1 text-xl font-semibold text-white">
+                    프리미엄 사주 상세 분석
+                  </h3>
+                </div>
                 <p className="text-xl font-bold text-[#f0d18a]">9,900원</p>
               </div>
+
               <div className="my-6 space-y-3">
-                {["종합 사주","재물운","직업운","연애·대인관계","시기별 흐름","오행 상세 분석"].map(item => (
-                  <div key={item} className="text-sm text-white/60"><span className="mr-3 text-[#e7c982]">✓</span>{item}</div>
+                {[
+                  "종합 사주",
+                  "재물운",
+                  "직업운",
+                  "연애·대인관계",
+                  "시기별 흐름",
+                  "오행 상세 분석",
+                ].map((item) => (
+                  <div key={item} className="text-sm text-white/60">
+                    <span className="mr-3 text-[#e7c982]">✓</span>
+                    {item}
+                  </div>
                 ))}
               </div>
+
               <label className="flex items-start gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4 text-xs leading-5 text-white/40">
-                <input type="checkbox" className="mt-1 accent-[#d8b46a]" defaultChecked />
-                상품 내용 및 이용 안내를 확인했습니다.
+                <input
+                  id="payment-agreement"
+                  type="checkbox"
+                  className="mt-1 accent-[#d8b46a]"
+                  defaultChecked
+                />
+                <span>상품 내용 및 이용 안내를 확인했습니다.</span>
               </label>
+
+              {paymentError && (
+                <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-400/[0.06] p-4 text-sm leading-6 text-red-200">
+                  {paymentError}
+                </div>
+              )}
+
               <button
-                onClick={() => { setPaid(true); setStep("result"); alert("테스트 결제가 완료되었습니다. 실제 결제는 아직 연결되지 않았습니다."); }}
-                className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-5 py-4 text-lg font-bold text-[#171107]"
+                disabled={paymentLoading}
+                onClick={async () => {
+                  const agreement = document.getElementById(
+                    "payment-agreement"
+                  ) as HTMLInputElement | null;
+
+                  if (!agreement?.checked) {
+                    setPaymentError("상품 내용 및 이용 안내를 확인해주세요.");
+                    return;
+                  }
+
+                  setPaymentError("");
+                  setPaymentLoading(true);
+
+                  try {
+                    const configResponse = await fetch("/api/payment/config");
+                    const config = await configResponse.json();
+
+                    if (!configResponse.ok || !config.clientKey) {
+                      throw new Error(
+                        config.error || "토스 결제 설정을 불러오지 못했습니다."
+                      );
+                    }
+
+                    const tossPaymentsModule = await import(
+                      "@tosspayments/tosspayments-sdk"
+                    );
+
+                    const tossPayments =
+                      await tossPaymentsModule.loadTossPayments(
+                        config.clientKey
+                      );
+
+                    const customerKey = `saju-${crypto.randomUUID()}`;
+
+                    const payment = tossPayments.payment({
+                      customerKey,
+                    });
+
+                    const orderId = `SAJU-${Date.now()}-${Math.random()
+                      .toString(36)
+                      .slice(2, 8)
+                      .toUpperCase()}`;
+
+                    sessionStorage.setItem(
+                      "saju_payment_order",
+                      JSON.stringify({
+                        orderId,
+                        amount: 9900,
+                        birthDate,
+                        birthTime,
+                        gender,
+                      })
+                    );
+
+                    await payment.requestPayment({
+                      method: "CARD",
+                      amount: {
+                        currency: "KRW",
+                        value: 9900,
+                      },
+                      orderId,
+                      orderName: "프리미엄 사주 상세 분석",
+                      successUrl: `${window.location.origin}/?payment=success`,
+                      failUrl: `${window.location.origin}/?payment=fail`,
+                    });
+                  } catch (error) {
+                    console.error(error);
+                    setPaymentError(
+                      error instanceof Error
+                        ? error.message
+                        : "결제 요청 중 오류가 발생했습니다."
+                    );
+                    setPaymentLoading(false);
+                  }
+                }}
+                className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-5 py-4 text-lg font-bold text-[#171107] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                테스트 결제하고 상세 결과 보기
+                {paymentLoading
+                  ? "결제창을 준비하고 있습니다..."
+                  : "토스 테스트 결제하기"}
               </button>
-              <p className="mt-4 text-center text-[10px] leading-5 text-white/25">실제 결제 서비스 연결 전 테스트용 버튼입니다.</p>
+
+              <p className="mt-4 text-center text-[10px] leading-5 text-white/25">
+                테스트 키를 사용한 결제입니다. 실제 청구가 발생하지 않습니다.
+              </p>
             </div>
           </div>
         </section>
@@ -894,3 +1123,170 @@ export default function Home() {
     </main>
   );
 }
+
+================================================================================
+FILE: app/api/payment/config/route.ts
+================================================================================
+
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  const clientKey = process.env.TOSS_CLIENT_KEY;
+
+  if (!clientKey) {
+    return NextResponse.json(
+      { error: "TOSS_CLIENT_KEY가 설정되지 않았습니다." },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ clientKey });
+}
+
+
+================================================================================
+FILE: app/api/payment/confirm/route.ts
+================================================================================
+
+import { NextResponse } from "next/server";
+
+const TOSS_CONFIRM_URL = "https://api.tosspayments.com/v1/payments/confirm";
+const EXPECTED_AMOUNT = 9900;
+
+export async function POST(request: Request) {
+  try {
+    const { paymentKey, orderId, amount } = await request.json();
+
+    if (
+      typeof paymentKey !== "string" ||
+      typeof orderId !== "string" ||
+      amount !== EXPECTED_AMOUNT
+    ) {
+      return NextResponse.json(
+        { error: "결제 정보가 올바르지 않습니다." },
+        { status: 400 }
+      );
+    }
+
+    const secretKey = process.env.TOSS_SECRET_KEY;
+
+    if (!secretKey) {
+      return NextResponse.json(
+        { error: "TOSS_SECRET_KEY가 설정되지 않았습니다." },
+        { status: 500 }
+      );
+    }
+
+    const encodedKey = Buffer.from(`${secretKey}:`).toString("base64");
+
+    const response = await fetch(TOSS_CONFIRM_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${encodedKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        paymentKey,
+        orderId,
+        amount,
+      }),
+      cache: "no-store",
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: data.message || "토스 결제 승인에 실패했습니다." },
+        { status: response.status }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      paymentKey: data.paymentKey,
+      orderId: data.orderId,
+      amount: data.totalAmount,
+      status: data.status,
+    });
+  } catch (error) {
+    console.error("Toss confirm error:", error);
+
+    return NextResponse.json(
+      { error: "결제 승인 처리 중 오류가 발생했습니다." },
+      { status: 500 }
+    );
+  }
+}
+
+
+================================================================================
+FILE: app/api/premium-saju/route.ts
+================================================================================
+
+import { NextResponse } from "next/server";
+import OpenAI from "openai";
+
+export async function POST(request: Request) {
+  try {
+    const { birthDate, birthTime, gender, paymentKey, orderId } =
+      await request.json();
+
+    if (!birthDate || !birthTime || !gender || !paymentKey || !orderId) {
+      return NextResponse.json(
+        { error: "상세 사주 분석에 필요한 정보가 부족합니다." },
+        { status: 400 }
+      );
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "OPENAI_API_KEY가 설정되지 않았습니다." },
+        { status: 500 }
+      );
+    }
+
+    const client = new OpenAI({ apiKey });
+
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.7,
+      messages: [
+        {
+          role: "system",
+          content:
+            "당신은 한국 전통 사주 해석을 참고한 콘텐츠를 작성하는 AI입니다. 미래를 확정적으로 단정하지 말고 오락 및 참고용으로 설명하세요. 사용자가 이해하기 쉽게 작성하고 과도한 공포나 단정적 표현은 피하세요. 반드시 다음 6개 제목을 순서대로 사용하세요: # 1. 종합 사주, # 2. 재물운, # 3. 직업운, # 4. 연애·대인관계, # 5. 시기별 흐름, # 6. 오행 상세 분석.",
+        },
+        {
+          role: "user",
+          content: `다음 정보를 바탕으로 상세 사주 분석을 작성해주세요.
+
+생년월일: ${birthDate}
+태어난 시간: ${birthTime}
+성별: ${gender}
+
+각 항목은 충분히 구체적으로 설명하되, 사주가 미래를 확정한다는 식으로 표현하지 마세요.`,
+        },
+      ],
+    });
+
+    const result =
+      completion.choices[0]?.message?.content?.trim() ||
+      "상세 사주 분석 결과를 생성하지 못했습니다.";
+
+    return NextResponse.json({
+      success: true,
+      result,
+    });
+  } catch (error) {
+    console.error("Premium saju error:", error);
+
+    return NextResponse.json(
+      { error: "상세 AI 사주 분석 생성 중 오류가 발생했습니다." },
+      { status: 500 }
+    );
+  }
+}
+
