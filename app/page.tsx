@@ -317,28 +317,28 @@ export default function Home() {
           className="min-h-screen px-5 py-8 sm:px-6 sm:py-12"
           style={{
             backgroundImage:
-              "linear-gradient(rgba(4,7,14,0.92), rgba(4,7,14,0.96)), url('/ai-saju-hero-bg.png')",
+              "linear-gradient(rgba(4,7,14,0.88), rgba(4,7,14,0.94)), url('/ai-saju-hero-bg.png')",
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
         >
-          <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-lg items-center justify-center">
-            <div className="w-full rounded-[30px] border border-[#d8b46a]/35 bg-[#08101b]/85 p-6 shadow-[0_25px_90px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8">
+          <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-xl items-center justify-center">
+            <div className="w-full rounded-[32px] border border-[#d8b46a]/40 bg-[#08101b]/85 p-6 shadow-[0_25px_100px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:p-9">
               <button
                 onClick={() => setStep("home")}
-                className="mb-8 text-sm text-white/50 transition hover:text-[#e7c982]"
+                className="mb-9 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-4 py-2 text-sm text-white/55 transition hover:border-[#d8b46a]/40 hover:text-[#e7c982]"
               >
                 ← 처음으로
               </button>
 
               <div className="mb-8">
-                <p className="mb-3 text-xs font-semibold tracking-[0.2em] text-[#d8b46a]">
+                <p className="mb-3 text-xs font-semibold tracking-[0.22em] text-[#d8b46a]">
                   AI SAJU
                 </p>
-                <h2 className="text-3xl font-semibold tracking-tight text-white">
+                <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                   사주 정보 입력
                 </h2>
-                <p className="mt-3 text-sm leading-6 text-white/45">
+                <p className="mt-3 text-sm leading-6 text-white/45 sm:text-base">
                   생년월일과 태어난 시간을 입력하면
                   <br />
                   당신의 사주를 분석해드립니다.
@@ -354,7 +354,7 @@ export default function Home() {
                     type="date"
                     value={birthDate}
                     onChange={(e) => setBirthDate(e.target.value)}
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-4 text-white outline-none transition focus:border-[#d8b46a]/80 focus:ring-1 focus:ring-[#d8b46a]/25"
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-[17px] text-white outline-none transition focus:border-[#d8b46a]/80 focus:bg-white/[0.08] focus:ring-1 focus:ring-[#d8b46a]/25"
                   />
                 </div>
 
@@ -366,7 +366,7 @@ export default function Home() {
                     type="time"
                     value={birthTime}
                     onChange={(e) => setBirthTime(e.target.value)}
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-4 text-white outline-none transition focus:border-[#d8b46a]/80 focus:ring-1 focus:ring-[#d8b46a]/25"
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-[17px] text-white outline-none transition focus:border-[#d8b46a]/80 focus:bg-white/[0.08] focus:ring-1 focus:ring-[#d8b46a]/25"
                   />
                 </div>
 
@@ -379,8 +379,8 @@ export default function Home() {
                       onClick={() => setGender("남성")}
                       className={`rounded-2xl border px-4 py-4 font-semibold transition ${
                         gender === "남성"
-                          ? "border-[#d8b46a] bg-[#d8b46a] text-[#151109]"
-                          : "border-white/10 bg-white/[0.055] text-white/60 hover:border-[#d8b46a]/40"
+                          ? "border-[#d8b46a] bg-[#d8b46a] text-[#151109] shadow-[0_8px_25px_rgba(216,180,106,0.18)]"
+                          : "border-white/10 bg-white/[0.055] text-white/60 hover:border-[#d8b46a]/40 hover:bg-white/[0.08]"
                       }`}
                     >
                       남성
@@ -389,8 +389,8 @@ export default function Home() {
                       onClick={() => setGender("여성")}
                       className={`rounded-2xl border px-4 py-4 font-semibold transition ${
                         gender === "여성"
-                          ? "border-[#d8b46a] bg-[#d8b46a] text-[#151109]"
-                          : "border-white/10 bg-white/[0.055] text-white/60 hover:border-[#d8b46a]/40"
+                          ? "border-[#d8b46a] bg-[#d8b46a] text-[#151109] shadow-[0_8px_25px_rgba(216,180,106,0.18)]"
+                          : "border-white/10 bg-white/[0.055] text-white/60 hover:border-[#d8b46a]/40 hover:bg-white/[0.08]"
                       }`}
                     >
                       여성
@@ -401,14 +401,15 @@ export default function Home() {
                 <button
                   onClick={startAnalysis}
                   disabled={loading}
-                  className="mt-2 w-full rounded-2xl bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-6 py-4 text-lg font-bold text-[#171107] shadow-[0_12px_35px_rgba(199,155,67,0.2)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-2 w-full rounded-2xl border border-[#f1d58d]/70 bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-6 py-[17px] text-lg font-bold tracking-wide text-[#171107] shadow-[0_12px_35px_rgba(199,155,67,0.22)] transition hover:brightness-105 hover:shadow-[0_15px_45px_rgba(199,155,67,0.3)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading ? "🔮 사주를 분석하고 있습니다..." : "사주 분석하기  →"}
                 </button>
 
-                <p className="text-center text-[11px] text-white/30">
-                  AI 사주는 재미와 참고를 위한 서비스입니다.
-                </p>
+                <div className="flex items-center justify-center gap-2 pt-1 text-[11px] text-white/30">
+                  <span className="text-[#d8b46a]">✦</span>
+                  입력 정보는 사주 분석을 위한 용도로 사용됩니다.
+                </div>
               </div>
             </div>
           </div>
@@ -418,15 +419,15 @@ export default function Home() {
       {/* ==================== RESULT ==================== */}
       {step === "result" && (
         <section className="min-h-screen bg-[#070b13] px-4 py-8 sm:px-6 sm:py-12">
-          <div className="mx-auto max-w-3xl">
-            <div className="mb-8 text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[#d8b46a]/45 bg-[#d8b46a]/[0.07] text-2xl text-[#e7c982]">
+          <div className="mx-auto max-w-4xl">
+            <div className="mb-9 text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[#d8b46a]/45 bg-[#d8b46a]/[0.07] text-2xl text-[#e7c982] shadow-[0_0_30px_rgba(216,180,106,0.08)]">
                 ✦
               </div>
               <p className="mb-2 text-xs font-semibold tracking-[0.22em] text-[#d8b46a]">
                 AI SAJU ANALYSIS
               </p>
-              <h2 className="text-3xl font-semibold text-white sm:text-4xl">
+              <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                 AI 사주 분석 결과
               </h2>
               <p className="mt-3 text-sm leading-6 text-white/45">
@@ -436,38 +437,39 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Input info */}
-            <div className="mb-5 rounded-[24px] border border-[#d8b46a]/20 bg-white/[0.035] p-5">
-              <p className="mb-4 text-sm font-semibold text-[#e7c982]">
-                📋 입력 정보
-              </p>
+            <div className="mb-5 rounded-[26px] border border-[#d8b46a]/20 bg-white/[0.035] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.18)] sm:p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-sm font-semibold text-[#e7c982]">📋 입력 정보</p>
+                <span className="rounded-full border border-[#d8b46a]/20 bg-[#d8b46a]/[0.05] px-3 py-1 text-[10px] text-[#d8b46a]">
+                  MY SAJU
+                </span>
+              </div>
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.035] p-3 text-center">
-                  <p className="text-[10px] text-white/35 sm:text-xs">생년월일</p>
-                  <p className="mt-1 text-xs font-semibold text-white sm:text-sm">
-                    {birthDate}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.035] p-3 text-center">
-                  <p className="text-[10px] text-white/35 sm:text-xs">태어난 시간</p>
-                  <p className="mt-1 text-xs font-semibold text-white sm:text-sm">
-                    {birthTime}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/[0.06] bg-white/[0.035] p-3 text-center">
-                  <p className="text-[10px] text-white/35 sm:text-xs">성별</p>
-                  <p className="mt-1 text-xs font-semibold text-white sm:text-sm">
-                    {gender}
-                  </p>
-                </div>
+                {[
+                  ["생년월일", birthDate],
+                  ["태어난 시간", birthTime],
+                  ["성별", gender],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="rounded-2xl border border-white/[0.06] bg-white/[0.035] p-3 text-center sm:p-4"
+                  >
+                    <p className="text-[10px] text-white/35 sm:text-xs">{label}</p>
+                    <p className="mt-1 text-xs font-semibold text-white sm:text-sm">
+                      {value}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Four pillars */}
-            <div className="mb-5 rounded-[24px] border border-[#d8b46a]/20 bg-white/[0.035] p-5">
-              <p className="mb-4 text-sm font-semibold text-[#e7c982]">
-                🔮 사주 원국
-              </p>
+            <div className="mb-5 rounded-[26px] border border-[#d8b46a]/20 bg-white/[0.035] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.18)] sm:p-6">
+              <div className="mb-5 flex items-center justify-between">
+                <p className="text-sm font-semibold text-[#e7c982]">🔮 사주 원국</p>
+                <span className="text-[10px] tracking-[0.15em] text-white/30">
+                  FOUR PILLARS
+                </span>
+              </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
                   ["년주", fourPillars.year],
@@ -477,10 +479,10 @@ export default function Home() {
                 ].map(([label, value]) => (
                   <div
                     key={label}
-                    className="rounded-2xl border border-white/[0.06] bg-[#0b111b] p-4 text-center"
+                    className="rounded-2xl border border-[#d8b46a]/15 bg-[#0b111b] p-5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                   >
                     <div className="text-xs text-white/35">{label}</div>
-                    <div className="mt-2 text-xl font-bold text-[#f0d18a]">
+                    <div className="mt-2 text-xl font-bold text-[#f0d18a] sm:text-2xl">
                       {value}
                     </div>
                   </div>
@@ -488,15 +490,17 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Five elements */}
-            <div className="mb-5 rounded-[24px] border border-[#d8b46a]/20 bg-white/[0.035] p-5">
-              <p className="mb-4 text-sm font-semibold text-[#e7c982]">
-                🌿 오행 분석
-              </p>
-              <div className="space-y-4">
+            <div className="mb-5 rounded-[26px] border border-[#d8b46a]/20 bg-white/[0.035] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.18)] sm:p-6">
+              <div className="mb-5 flex items-center justify-between">
+                <p className="text-sm font-semibold text-[#e7c982]">🌿 오행 분석</p>
+                <span className="text-[10px] tracking-[0.15em] text-white/30">
+                  FIVE ELEMENTS
+                </span>
+              </div>
+              <div className="space-y-5">
                 {elements.map((element) => (
                   <div key={element.name}>
-                    <div className="mb-1 flex items-center justify-between">
+                    <div className="mb-1.5 flex items-center justify-between">
                       <span className="text-sm font-semibold text-white/80">
                         {element.name}
                       </span>
@@ -526,12 +530,9 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Five element interpretation */}
-            <div className="mb-5 rounded-[24px] border border-[#d8b46a]/20 bg-white/[0.035] p-5">
-              <p className="mb-4 text-sm font-semibold text-[#e7c982]">
-                🌿 오행 해석
-              </p>
-              <p className="mb-5 text-xs leading-6 text-white/35">
+            <div className="mb-5 rounded-[26px] border border-[#d8b46a]/20 bg-white/[0.035] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.18)] sm:p-6">
+              <p className="mb-4 text-sm font-semibold text-[#e7c982]">🌿 오행 해석</p>
+              <p className="mb-5 rounded-xl border border-white/[0.05] bg-white/[0.02] p-3 text-xs leading-6 text-white/35">
                 ※ 아래 내용은 오행의 단순 개수를 기준으로 한 참고용 해석이며,
                 전통 명리학의 오행 강약을 확정적으로 판단하는 기준은 아닙니다.
               </p>
@@ -553,55 +554,33 @@ export default function Home() {
 
               <div className="space-y-3 text-sm leading-7 text-white/65">
                 {fiveElements.wood === 0 && (
-                  <p>
-                    🌱 목(木)이 부족한 편으로, 새로운 시작이나 유연한 사고를
-                    의식적으로 보완해보는 것이 좋습니다.
-                  </p>
+                  <p>🌱 목(木)이 부족한 편으로, 새로운 시작이나 유연한 사고를 의식적으로 보완해보는 것이 좋습니다.</p>
                 )}
                 {fiveElements.fire === 0 && (
-                  <p>
-                    🔥 화(火)가 부족한 편으로, 활력과 표현력을 생활 속에서
-                    조금씩 키워보는 것이 도움이 될 수 있습니다.
-                  </p>
+                  <p>🔥 화(火)가 부족한 편으로, 활력과 표현력을 생활 속에서 조금씩 키워보는 것이 도움이 될 수 있습니다.</p>
                 )}
                 {fiveElements.earth === 0 && (
-                  <p>
-                    🏔️ 토(土)가 부족한 편으로, 안정감과 꾸준함을 의식적으로
-                    유지하는 것이 도움이 될 수 있습니다.
-                  </p>
+                  <p>🏔️ 토(土)가 부족한 편으로, 안정감과 꾸준함을 의식적으로 유지하는 것이 도움이 될 수 있습니다.</p>
                 )}
                 {fiveElements.metal === 0 && (
-                  <p>
-                    ⚔️ 금(金)이 부족한 편으로, 원칙과 판단력을 균형 있게
-                    활용하는 것이 도움이 될 수 있습니다.
-                  </p>
+                  <p>⚔️ 금(金)이 부족한 편으로, 원칙과 판단력을 균형 있게 활용하는 것이 도움이 될 수 있습니다.</p>
                 )}
                 {fiveElements.water === 0 && (
-                  <p>
-                    💧 수(水)가 부족한 편으로, 휴식과 유연한 사고를 생활 속에서
-                    챙기는 것이 좋습니다.
-                  </p>
+                  <p>💧 수(水)가 부족한 편으로, 휴식과 유연한 사고를 생활 속에서 챙기는 것이 좋습니다.</p>
                 )}
                 {fiveElements.wood > 0 &&
                   fiveElements.fire > 0 &&
                   fiveElements.earth > 0 &&
                   fiveElements.metal > 0 &&
                   fiveElements.water > 0 && (
-                    <p>
-                      🌈 다섯 오행이 모두 나타나 있어 특정 오행이 완전히 빠진
-                      구조는 아닙니다. 각 요소의 비중을 참고해 균형을
-                      살펴볼 수 있습니다.
-                    </p>
+                    <p>🌈 다섯 오행이 모두 나타나 있어 특정 오행이 완전히 빠진 구조는 아닙니다. 각 요소의 비중을 참고해 균형을 살펴볼 수 있습니다.</p>
                   )}
               </div>
             </div>
 
-            {/* AI analysis */}
-            <div className="mb-5 rounded-[24px] border border-[#d8b46a]/20 bg-white/[0.035] p-5">
+            <div className="mb-5 rounded-[26px] border border-[#d8b46a]/20 bg-white/[0.035] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.18)] sm:p-6">
               <div className="mb-5 flex items-center justify-between">
-                <p className="text-sm font-semibold text-[#e7c982]">
-                  🧠 AI 분석 내용
-                </p>
+                <p className="text-sm font-semibold text-[#e7c982]">🧠 AI 분석 내용</p>
                 <span className="rounded-full border border-[#d8b46a]/20 bg-[#d8b46a]/[0.05] px-3 py-1 text-[10px] text-[#d8b46a]">
                   FREE
                 </span>
@@ -614,14 +593,13 @@ export default function Home() {
                   .map((section, index) => {
                     const lines = section.trim().split("\n");
                     const title =
-                      lines[0]?.replace(/^#\s*/, "") ||
-                      `분석 ${index + 1}`;
+                      lines[0]?.replace(/^#\s*/, "") || `분석 ${index + 1}`;
                     const content = lines.slice(1).join("\n").trim();
 
                     return (
                       <div
                         key={index}
-                        className="rounded-2xl border border-white/[0.06] bg-[#0a1019] p-5"
+                        className="rounded-2xl border border-white/[0.06] bg-[#0a1019] p-5 sm:p-6"
                       >
                         <h3 className="mb-3 text-lg font-bold text-[#f0d18a]">
                           {title}
@@ -635,19 +613,21 @@ export default function Home() {
               </div>
             </div>
 
-            <button
-              onClick={copyAnalysis}
-              className="mb-3 w-full rounded-2xl border border-white/10 bg-white/[0.035] px-6 py-4 font-bold text-white/75 transition hover:border-[#d8b46a]/30 hover:bg-white/[0.06]"
-            >
-              📋 분석 결과 복사하기
-            </button>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                onClick={copyAnalysis}
+                className="rounded-2xl border border-white/10 bg-white/[0.035] px-6 py-4 font-bold text-white/75 transition hover:border-[#d8b46a]/30 hover:bg-white/[0.06]"
+              >
+                📋 분석 결과 복사하기
+              </button>
 
-            <button
-              onClick={resetInput}
-              className="w-full rounded-2xl border border-[#d8b46a]/40 bg-[#d8b46a]/10 px-6 py-4 font-bold text-[#e7c982] transition hover:bg-[#d8b46a]/15"
-            >
-              다시 입력하기
-            </button>
+              <button
+                onClick={resetInput}
+                className="rounded-2xl border border-[#d8b46a]/40 bg-[#d8b46a]/10 px-6 py-4 font-bold text-[#e7c982] transition hover:bg-[#d8b46a]/15"
+              >
+                다시 입력하기
+              </button>
+            </div>
           </div>
         </section>
       )}
