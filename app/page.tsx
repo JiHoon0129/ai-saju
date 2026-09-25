@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 export default function Home() {
-  const [step, setStep] = useState<"home" | "input" | "result">("home");
+  const [step, setStep] = useState<"home" | "input" | "result" | "service" | "guide" | "support" | "checkout" | "legal">("home");
 
   const [analysis, setAnalysis] = useState("");
 
@@ -24,6 +24,7 @@ export default function Home() {
 
   const [loading, setLoading] = useState(false);
   const [paid, setPaid] = useState(false);
+  const [legalPage, setLegalPage] = useState<"terms" | "privacy" | "refund" | "business">("terms");
 
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("");
@@ -149,15 +150,9 @@ export default function Home() {
             </button>
 
             <nav className="hidden items-center gap-9 text-sm font-medium text-white/75 sm:flex">
-              <button className="transition hover:text-[#e8cc8d]">
-                서비스 소개
-              </button>
-              <button className="transition hover:text-[#e8cc8d]">
-                이용안내
-              </button>
-              <button className="transition hover:text-[#e8cc8d]">
-                고객센터
-              </button>
+              <button onClick={() => setStep("service")} className="transition hover:text-[#e8cc8d]">서비스 소개</button>
+              <button onClick={() => setStep("guide")} className="transition hover:text-[#e8cc8d]">이용안내</button>
+              <button onClick={() => setStep("support")} className="transition hover:text-[#e8cc8d]">고객센터</button>
             </nav>
 
             <button
@@ -306,8 +301,11 @@ export default function Home() {
               ))}
             </div>
 
-            <div className="mt-8 text-[10px] tracking-[0.2em] text-white/30">
-              SCROLL TO EXPLORE
+            <div className="mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 text-[10px] text-white/30">
+              <button onClick={() => { setLegalPage("terms"); setStep("legal"); }} className="hover:text-[#d8b46a]">이용약관</button>
+              <button onClick={() => { setLegalPage("privacy"); setStep("legal"); }} className="hover:text-[#d8b46a]">개인정보처리방침</button>
+              <button onClick={() => { setLegalPage("refund"); setStep("legal"); }} className="hover:text-[#d8b46a]">환불정책</button>
+              <button onClick={() => { setLegalPage("business"); setStep("legal"); }} className="hover:text-[#d8b46a]">사업자 정보</button>
             </div>
           </div>
         </section>
@@ -660,10 +658,10 @@ export default function Home() {
                       실제 결제 연동 전 테스트 화면입니다.
                     </p>
                     <button
-                      onClick={() => setPaid(true)}
+                      onClick={() => setStep("checkout")}
                       className="mt-4 w-full rounded-2xl bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-5 py-4 font-bold text-[#171107] shadow-[0_12px_35px_rgba(199,155,67,0.18)] transition hover:brightness-105"
                     >
-                      테스트 결제로 상세 결과 열기
+                      상세 사주 결제하기
                     </button>
                   </div>
                 </div>
@@ -758,6 +756,141 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      {step === "service" && (
+        <section className="min-h-screen bg-[#070b13] px-5 py-10 sm:px-6 sm:py-14">
+          <div className="mx-auto max-w-4xl">
+            <button onClick={() => setStep("home")} className="mb-8 text-sm text-white/45 hover:text-[#e7c982]">← 홈으로</button>
+            <div className="mb-10 text-center">
+              <p className="text-xs font-semibold tracking-[0.22em] text-[#d8b46a]">SERVICE</p>
+              <h2 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">AI 사주 서비스 소개</h2>
+              <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-white/45">
+                생년월일과 태어난 시간을 바탕으로 사주 원국과 오행을 확인하고 AI가 이해하기 쉬운 형태로 내용을 정리합니다.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[
+                ["01","사주 원국","년주·월주·일주·시주를 확인합니다."],
+                ["02","오행 분석","목·화·토·금·수의 분포를 확인합니다."],
+                ["03","상세 분석","재물운·직업운·관계·흐름 등을 확장합니다."]
+              ].map(([n,t,d]) => (
+                <div key={n} className="rounded-[24px] border border-[#d8b46a]/15 bg-white/[0.035] p-6">
+                  <p className="text-xs tracking-[0.2em] text-[#d8b46a]">{n}</p>
+                  <h3 className="mt-3 text-lg font-semibold text-white">{t}</h3>
+                  <p className="mt-3 text-sm leading-6 text-white/45">{d}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 rounded-[26px] border border-[#d8b46a]/20 bg-white/[0.035] p-6">
+              <h3 className="text-lg font-semibold text-[#f0d18a]">이용 전 안내</h3>
+              <p className="mt-3 text-sm leading-7 text-white/50">
+                AI 사주 결과는 전통적인 사주 해석을 참고한 콘텐츠이며 미래를 확정적으로 예측하는 자료가 아닙니다.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {step === "guide" && (
+        <section className="min-h-screen bg-[#070b13] px-5 py-10 sm:px-6 sm:py-14">
+          <div className="mx-auto max-w-3xl">
+            <button onClick={() => setStep("home")} className="mb-8 text-sm text-white/45 hover:text-[#e7c982]">← 홈으로</button>
+            <div className="mb-10 text-center">
+              <p className="text-xs font-semibold tracking-[0.22em] text-[#d8b46a]">GUIDE</p>
+              <h2 className="mt-3 text-3xl font-semibold text-white">이용안내</h2>
+            </div>
+            <div className="space-y-3">
+              {[
+                ["1. 정보 입력","생년월일, 태어난 시간, 성별을 입력합니다."],
+                ["2. 무료 분석","사주 원국과 오행, 기본 AI 분석을 확인합니다."],
+                ["3. 상세 분석","프리미엄 상세 분석이 필요한 경우 결제 화면으로 이동합니다."],
+                ["4. 결제","현재는 실제 결제 연동 전 단계의 화면입니다."],
+                ["5. 상세 결과","결제 연동 후 개인별 상세 분석을 제공하도록 확장합니다."]
+              ].map(([t,d]) => (
+                <div key={t} className="rounded-2xl border border-white/[0.06] bg-white/[0.035] p-5">
+                  <h3 className="font-semibold text-[#f0d18a]">{t}</h3>
+                  <p className="mt-2 text-sm leading-6 text-white/45">{d}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {step === "support" && (
+        <section className="min-h-screen bg-[#070b13] px-5 py-10 sm:px-6 sm:py-14">
+          <div className="mx-auto max-w-2xl">
+            <button onClick={() => setStep("home")} className="mb-8 text-sm text-white/45 hover:text-[#e7c982]">← 홈으로</button>
+            <div className="rounded-[28px] border border-[#d8b46a]/20 bg-white/[0.035] p-6 sm:p-8">
+              <p className="text-xs font-semibold tracking-[0.22em] text-[#d8b46a]">SUPPORT</p>
+              <h2 className="mt-3 text-3xl font-semibold text-white">고객센터</h2>
+              <p className="mt-3 text-sm leading-6 text-white/45">서비스 이용 중 궁금한 점이나 결제·결과 관련 문의를 남길 수 있습니다.</p>
+              <div className="mt-7 space-y-4">
+                <input placeholder="문의 제목을 입력해주세요." className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-4 text-white outline-none placeholder:text-white/25 focus:border-[#d8b46a]/70" />
+                <textarea rows={6} placeholder="문의 내용을 입력해주세요." className="w-full resize-none rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-4 text-white outline-none placeholder:text-white/25 focus:border-[#d8b46a]/70" />
+                <button onClick={() => alert("문의 기능은 실제 운영 단계에서 이메일 또는 고객센터 API와 연결합니다.")} className="w-full rounded-2xl bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-5 py-4 font-bold text-[#171107]">문의 접수하기</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {step === "checkout" && (
+        <section className="min-h-screen bg-[#070b13] px-5 py-10 sm:px-6 sm:py-14">
+          <div className="mx-auto max-w-2xl">
+            <button onClick={() => setStep("result")} className="mb-8 text-sm text-white/45 hover:text-[#e7c982]">← 결과로 돌아가기</button>
+            <div className="mb-8 text-center">
+              <p className="text-xs font-semibold tracking-[0.22em] text-[#d8b46a]">PREMIUM CHECKOUT</p>
+              <h2 className="mt-3 text-3xl font-semibold text-white">상세 사주 분석 결제</h2>
+              <p className="mt-3 text-sm text-white/40">현재는 실제 결제 연동 전 테스트 단계입니다.</p>
+            </div>
+            <div className="rounded-[28px] border border-[#d8b46a]/25 bg-white/[0.035] p-6 sm:p-8">
+              <div className="flex items-center justify-between border-b border-white/[0.07] pb-5">
+                <div><p className="text-xs text-white/35">상품</p><h3 className="mt-1 text-xl font-semibold text-white">프리미엄 사주 상세 분석</h3></div>
+                <p className="text-xl font-bold text-[#f0d18a]">9,900원</p>
+              </div>
+              <div className="my-6 space-y-3">
+                {["종합 사주","재물운","직업운","연애·대인관계","시기별 흐름","오행 상세 분석"].map(item => (
+                  <div key={item} className="text-sm text-white/60"><span className="mr-3 text-[#e7c982]">✓</span>{item}</div>
+                ))}
+              </div>
+              <label className="flex items-start gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4 text-xs leading-5 text-white/40">
+                <input type="checkbox" className="mt-1 accent-[#d8b46a]" defaultChecked />
+                상품 내용 및 이용 안내를 확인했습니다.
+              </label>
+              <button
+                onClick={() => { setPaid(true); setStep("result"); alert("테스트 결제가 완료되었습니다. 실제 결제는 아직 연결되지 않았습니다."); }}
+                className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-5 py-4 text-lg font-bold text-[#171107]"
+              >
+                테스트 결제하고 상세 결과 보기
+              </button>
+              <p className="mt-4 text-center text-[10px] leading-5 text-white/25">실제 결제 서비스 연결 전 테스트용 버튼입니다.</p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {step === "legal" && (
+        <section className="min-h-screen bg-[#070b13] px-5 py-10 sm:px-6 sm:py-14">
+          <div className="mx-auto max-w-3xl">
+            <button onClick={() => setStep("home")} className="mb-8 text-sm text-white/45 hover:text-[#e7c982]">← 홈으로</button>
+            <div className="mb-6 flex flex-wrap gap-2">
+              {[
+                ["terms","이용약관"],["privacy","개인정보처리방침"],["refund","환불정책"],["business","사업자 정보"]
+              ].map(([key,label]) => (
+                <button key={key} onClick={() => setLegalPage(key as typeof legalPage)} className={`rounded-full border px-4 py-2 text-xs ${legalPage === key ? "border-[#d8b46a] bg-[#d8b46a]/10 text-[#f0d18a]" : "border-white/10 text-white/45"}`}>{label}</button>
+              ))}
+            </div>
+            <div className="rounded-[28px] border border-[#d8b46a]/20 bg-white/[0.035] p-6 sm:p-8">
+              {legalPage === "terms" && <div><h2 className="text-2xl font-semibold text-white">이용약관</h2><div className="mt-6 space-y-5 text-sm leading-7 text-white/50"><p><b className="text-[#e7c982]">제1조 목적</b><br/>본 약관은 AI 사주 서비스의 이용과 관련한 기본적인 사항을 정하는 것을 목적으로 합니다.</p><p><b className="text-[#e7c982]">제2조 서비스의 성격</b><br/>본 서비스는 사주 해석을 참고한 AI 콘텐츠를 제공합니다. 결과는 오락 및 참고 목적이며 특정 미래를 보장하지 않습니다.</p><p><b className="text-[#e7c982]">제3조 유료 서비스</b><br/>유료 서비스의 상품 내용과 결제 조건은 결제 화면에 표시하며 실제 운영 시 관련 법령과 결제대행사 정책을 반영합니다.</p></div></div>}
+              {legalPage === "privacy" && <div><h2 className="text-2xl font-semibold text-white">개인정보처리방침</h2><div className="mt-6 space-y-5 text-sm leading-7 text-white/50"><p><b className="text-[#e7c982]">수집 항목</b><br/>서비스 제공에 필요한 입력 정보와 문의·결제 과정에서 필요한 정보를 구분하여 관리합니다.</p><p><b className="text-[#e7c982]">이용 목적</b><br/>사주 분석 제공, 서비스 운영, 문의 응대 및 결제 처리를 위한 목적으로 사용합니다.</p><p><b className="text-[#e7c982]">보관 및 파기</b><br/>실제 운영 시 항목별 보관 기간과 파기 절차를 법령 및 서비스 정책에 맞게 확정합니다.</p></div></div>}
+              {legalPage === "refund" && <div><h2 className="text-2xl font-semibold text-white">환불정책</h2><div className="mt-6 space-y-5 text-sm leading-7 text-white/50"><p><b className="text-[#e7c982]">결제 전</b><br/>상품 내용과 가격을 확인한 후 결제를 진행할 수 있도록 안내합니다.</p><p><b className="text-[#e7c982]">결제 후</b><br/>디지털 콘텐츠의 제공 여부와 이용 상태를 기준으로 실제 운영 정책을 정하고 결제 화면에 명확히 표시합니다.</p></div></div>}
+              {legalPage === "business" && <div><h2 className="text-2xl font-semibold text-white">사업자 정보</h2><div className="mt-6 rounded-2xl border border-white/[0.06] bg-[#0a1019] p-5 text-sm leading-8 text-white/45"><p>상호: <span className="text-white/70">실제 사업자 등록 후 입력</span></p><p>대표자: <span className="text-white/70">실제 사업자 등록 후 입력</span></p><p>사업자등록번호: <span className="text-white/70">실제 사업자 등록 후 입력</span></p><p>사업장 주소: <span className="text-white/70">실제 사업자 등록 후 입력</span></p><p>고객센터: <span className="text-white/70">실제 운영 연락처 연결</span></p></div></div>}
+            </div>
+          </div>
+        </section>
+      )}
+
     </main>
   );
 }
