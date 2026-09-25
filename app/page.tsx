@@ -132,21 +132,21 @@ export default function Home() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(218,177,88,0.12),transparent_38%)]" />
 
           {/* Header */}
-          <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
+          <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-6 sm:px-8 lg:px-10">
             <button
               onClick={() => setStep("home")}
-              className="group flex items-center gap-3"
+              className="group flex items-center gap-3 sm:gap-4"
               aria-label="AI 사주 홈"
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#d8b46a]/60 bg-[#0b1019]/70 text-lg text-[#e7c982] shadow-[0_0_25px_rgba(216,180,106,0.12)] backdrop-blur-md transition group-hover:border-[#e7c982]">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full border border-[#d8b46a]/60 bg-[#0b1019]/70 text-lg text-[#e7c982] shadow-[0_0_25px_rgba(216,180,106,0.12)] backdrop-blur-md transition group-hover:border-[#e7c982]">
                 ☯
               </span>
-              <span className="text-xl font-semibold tracking-[0.12em] text-[#ead29a] sm:text-2xl">
+              <span className="text-xl font-semibold tracking-[0.14em] text-[#ead29a] sm:text-2xl lg:text-[26px]">
                 AI 사주
               </span>
             </button>
 
-            <nav className="hidden items-center gap-7 text-sm text-white/75 sm:flex">
+            <nav className="hidden items-center gap-9 text-sm font-medium text-white/75 sm:flex">
               <button className="transition hover:text-[#e8cc8d]">
                 서비스 소개
               </button>
@@ -167,41 +167,41 @@ export default function Home() {
           </header>
 
           {/* Hero */}
-          <div className="relative z-10 mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-6xl flex-col items-center px-5 pb-10 pt-12 text-center sm:px-8 sm:pt-16 lg:px-10 lg:pt-20">
+          <div className="relative z-10 mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-7xl flex-col items-center px-5 pb-10 pt-10 text-center sm:px-8 sm:pt-14 lg:px-10 lg:pt-16">
             <div className="mb-5 flex items-center gap-3 text-[11px] font-medium tracking-[0.24em] text-[#e6c77f] sm:text-xs">
               <span className="h-px w-8 bg-[#d8b46a]/70 sm:w-12" />
               <span>AI가 풀어주는 당신의 운명</span>
               <span className="h-px w-8 bg-[#d8b46a]/70 sm:w-12" />
             </div>
 
-            <p className="mb-3 text-sm font-medium tracking-[0.22em] text-white/70 sm:text-base">
+            <p className="mb-4 text-sm font-medium tracking-[0.22em] text-white/75 sm:text-base">
               생년월일로 시작하는 나만의 이야기
             </p>
 
-            <h1 className="text-5xl font-semibold tracking-[-0.04em] text-[#f2d99b] drop-shadow-[0_4px_28px_rgba(0,0,0,0.55)] sm:text-7xl lg:text-8xl">
+            <h1 className="text-6xl font-semibold tracking-[-0.045em] text-[#f2d99b] drop-shadow-[0_4px_28px_rgba(0,0,0,0.58)] sm:text-8xl lg:text-9xl">
               AI 사주
             </h1>
 
-            <h2 className="mt-5 text-2xl font-medium leading-[1.45] tracking-tight text-white sm:text-3xl lg:text-4xl">
+            <h2 className="mt-5 text-2xl font-semibold leading-[1.45] tracking-tight text-white sm:text-3xl lg:text-[42px]">
               당신의 사주에 담긴
               <br />
               <span className="text-[#e7ca88]">인생의 이야기를 확인해보세요.</span>
             </h2>
 
-            <p className="mt-5 max-w-xl text-sm leading-7 text-white/75 sm:text-base">
+            <p className="mt-6 max-w-2xl text-sm leading-7 text-white/80 sm:text-base lg:text-[17px]">
               생년월일과 태어난 시간을 입력하면
               <br className="sm:hidden" />
               {" "}AI가 사주를 알기 쉽게 분석해드립니다.
             </p>
 
             {/* Input Card */}
-            <div className="mt-9 w-full max-w-2xl rounded-[30px] border border-[#d8b46a]/45 bg-[#08101b]/72 p-5 shadow-[0_24px_90px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:mt-11 sm:p-7">
-              <div className="mb-5 flex items-center justify-between border-b border-white/10 pb-4 text-left">
+            <div className="mt-10 w-full max-w-3xl rounded-[32px] border border-[#d8b46a]/50 bg-[#08101b]/76 p-6 shadow-[0_24px_90px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:mt-12 sm:p-8 lg:p-9">
+              <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-5 text-left">
                 <div>
-                  <p className="text-sm font-semibold text-[#ead29a]">
+                  <p className="text-base font-semibold tracking-wide text-[#ead29a]">
                     사주 정보 입력
                   </p>
-                  <p className="mt-1 text-xs text-white/45">
+                  <p className="mt-1 text-xs leading-5 text-white/45 sm:text-sm">
                     정확한 분석을 위해 입력해주세요.
                   </p>
                 </div>
@@ -219,7 +219,7 @@ export default function Home() {
                     type="date"
                     value={birthDate}
                     onChange={(e) => setBirthDate(e.target.value)}
-                    className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-4 text-white outline-none transition placeholder:text-white/30 focus:border-[#d8b46a]/80 focus:bg-white/[0.08] focus:ring-1 focus:ring-[#d8b46a]/30"
+                    className="w-full rounded-2xl border border-white/10 bg-white/[0.065] px-4 py-[17px] text-white outline-none transition placeholder:text-white/30 focus:border-[#d8b46a]/80 focus:bg-white/[0.08] focus:ring-1 focus:ring-[#d8b46a]/30"
                   />
                 </div>
 
@@ -267,7 +267,7 @@ export default function Home() {
               <button
                 onClick={startAnalysis}
                 disabled={loading}
-                className="mt-5 w-full rounded-2xl border border-[#f1d58d]/60 bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-6 py-4 text-base font-bold tracking-wide text-[#171107] shadow-[0_12px_35px_rgba(199,155,67,0.22)] transition hover:brightness-105 hover:shadow-[0_14px_42px_rgba(199,155,67,0.30)] disabled:cursor-not-allowed disabled:opacity-50 sm:text-lg"
+                className="mt-6 w-full rounded-2xl border border-[#f1d58d]/70 bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-6 py-[17px] text-base font-bold tracking-wide text-[#171107] sm:text-lg shadow-[0_12px_35px_rgba(199,155,67,0.22)] transition hover:brightness-105 hover:shadow-[0_14px_42px_rgba(199,155,67,0.30)] disabled:cursor-not-allowed disabled:opacity-50 sm:text-lg"
               >
                 {loading ? "🔮 사주를 분석하고 있습니다..." : "사주 분석 시작하기  →"}
               </button>
@@ -280,7 +280,7 @@ export default function Home() {
             </div>
 
             {/* Benefits */}
-            <div className="mt-10 grid w-full max-w-4xl grid-cols-2 gap-3 border-t border-white/10 pt-7 sm:mt-12 sm:grid-cols-4 sm:gap-5 sm:pt-8">
+            <div className="mt-12 grid w-full max-w-5xl grid-cols-2 gap-4 border-t border-white/10 pt-7 sm:mt-14 sm:grid-cols-4 sm:gap-5 sm:pt-9">
               {[
                 ["✦", "맞춤형 사주 분석", "입력한 정보를 바탕으로"],
                 ["◈", "AI 맞춤 해석", "쉽게 이해하는 풀이"],
@@ -289,9 +289,9 @@ export default function Home() {
               ].map(([icon, title, desc]) => (
                 <div
                   key={title}
-                  className="rounded-2xl border border-white/[0.07] bg-black/10 px-3 py-4 backdrop-blur-sm"
+                  className="rounded-2xl border border-white/[0.09] bg-[#08101b]/20 px-4 py-5 backdrop-blur-md transition hover:border-[#d8b46a]/25 hover:bg-[#08101b]/30"
                 >
-                  <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-[#d8b46a]/45 bg-[#d8b46a]/[0.06] text-lg text-[#e7c982]">
+                  <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-[#d8b46a]/45 bg-[#d8b46a]/[0.06] text-lg text-[#e7c982]">
                     {icon}
                   </div>
                   <p className="text-xs font-semibold text-white sm:text-sm">
