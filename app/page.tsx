@@ -124,7 +124,7 @@ export default function Home() {
           className="relative min-h-screen overflow-hidden"
           style={{
             backgroundImage:
-              "linear-gradient(rgba(4,7,14,0.30), rgba(4,7,14,0.52)), url('/ai-saju-hero-bg.png')",
+              "linear-gradient(rgba(4,7,14,0.12), rgba(4,7,14,0.30)), url('/ai-saju-hero-bg.png')",
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
@@ -654,4 +654,3 @@ export default function Home() {
     </main>
   );
 }
-
