@@ -857,7 +857,7 @@ export default function Home() {
       {/* ==================== INPUT ==================== */}
       {step === "input" && (
         <section
-          className="min-h-screen px-5 py-8 sm:px-6 sm:py-12"
+          className="min-h-screen px-4 py-5 sm:px-6 sm:py-12"
           style={{
             backgroundImage:
               "linear-gradient(rgba(4,7,14,0.88), rgba(4,7,14,0.94)), url('/ai-saju-hero-bg.png')",
@@ -865,30 +865,30 @@ export default function Home() {
             backgroundPosition: "center",
           }}
         >
-          <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-xl items-center justify-center">
-            <div className="w-full rounded-[32px] border border-[#d8b46a]/40 bg-[#08101b]/85 p-6 shadow-[0_25px_100px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:p-9">
+          <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-xl items-start justify-center sm:min-h-[calc(100vh-4rem)] sm:items-center">
+            <div className="w-full rounded-[28px] border border-[#d8b46a]/40 bg-[#08101b]/90 p-5 shadow-[0_25px_100px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:rounded-[32px] sm:p-9">
               <button
                 onClick={() => setStep("home")}
-                className="mb-9 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-4 py-2 text-sm text-white/55 transition hover:border-[#d8b46a]/40 hover:text-[#e7c982]"
+                className="mb-7 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-4 py-2 text-sm text-white/55 transition hover:border-[#d8b46a]/40 hover:text-[#e7c982] sm:mb-9"
               >
                 ← 처음으로
               </button>
 
-              <div className="mb-8">
+              <div className="mb-7 sm:mb-8">
                 <p className="mb-3 text-xs font-semibold tracking-[0.22em] text-[#d8b46a]">
                   AI SAJU
                 </p>
-                <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                <h2 className="text-[29px] font-semibold tracking-tight text-white sm:text-4xl">
                   사주 정보 입력
                 </h2>
-                <p className="mt-3 text-sm leading-6 text-white/45 sm:text-base">
+                <p className="mt-3 text-[13px] leading-6 text-white/45 sm:text-base">
                   생년월일과 태어난 시간을 입력하면
                   <br />
                   당신의 사주를 분석해드립니다.
                 </p>
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-4 sm:space-y-5">
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-[#ead29a]">
                     생년월일
@@ -900,7 +900,7 @@ export default function Home() {
                     onChange={(e) => setBirthDate(e.target.value)}
                     onClick={openBirthDatePicker}
                     aria-label="생년월일 선택"
-                    className="w-full cursor-pointer rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-[17px] text-white outline-none transition focus:border-[#d8b46a]/80 focus:bg-white/[0.08] focus:ring-1 focus:ring-[#d8b46a]/25"
+                    className="w-full min-h-[54px] cursor-pointer touch-manipulation rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-4 text-base text-white outline-none transition focus:border-[#d8b46a]/80 focus:bg-white/[0.08] focus:ring-1 focus:ring-[#d8b46a]/25" style={{ colorScheme: "dark" }}
                   />
                 </div>
 
@@ -912,7 +912,7 @@ export default function Home() {
                     value={birthTime}
                     onChange={(e) => setBirthTime(e.target.value)}
                     aria-label="태어난 시간대 선택"
-                    className="w-full cursor-pointer appearance-none rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-[17px] text-white outline-none transition focus:border-[#d8b46a]/80 focus:bg-white/[0.08] focus:ring-1 focus:ring-[#d8b46a]/25"
+                    className="w-full min-h-[54px] cursor-pointer touch-manipulation appearance-none rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-4 pr-11 text-base text-white outline-none transition focus:border-[#d8b46a]/80 focus:bg-white/[0.08] focus:ring-1 focus:ring-[#d8b46a]/25"
                   >
                     <option value="" className="bg-[#08101b]">태어난 시간대를 선택해주세요</option>
                     {birthTimeRanges.map((range) => (
@@ -933,7 +933,7 @@ export default function Home() {
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => setGender("남성")}
-                      className={`rounded-2xl border px-4 py-4 font-semibold transition ${
+                      className={`min-h-[54px] touch-manipulation rounded-2xl border px-4 py-4 font-semibold transition ${
                         gender === "남성"
                           ? "border-[#d8b46a] bg-[#d8b46a] text-[#151109] shadow-[0_8px_25px_rgba(216,180,106,0.18)]"
                           : "border-white/10 bg-white/[0.055] text-white/60 hover:border-[#d8b46a]/40 hover:bg-white/[0.08]"
@@ -943,7 +943,7 @@ export default function Home() {
                     </button>
                     <button
                       onClick={() => setGender("여성")}
-                      className={`rounded-2xl border px-4 py-4 font-semibold transition ${
+                      className={`min-h-[54px] touch-manipulation rounded-2xl border px-4 py-4 font-semibold transition ${
                         gender === "여성"
                           ? "border-[#d8b46a] bg-[#d8b46a] text-[#151109] shadow-[0_8px_25px_rgba(216,180,106,0.18)]"
                           : "border-white/10 bg-white/[0.055] text-white/60 hover:border-[#d8b46a]/40 hover:bg-white/[0.08]"
@@ -957,7 +957,7 @@ export default function Home() {
                 <button
                   onClick={startAnalysis}
                   disabled={loading}
-                  className="mt-2 w-full rounded-2xl border border-[#f1d58d]/70 bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-6 py-[17px] text-lg font-bold tracking-wide text-[#171107] shadow-[0_12px_35px_rgba(199,155,67,0.22)] transition hover:brightness-105 hover:shadow-[0_15px_45px_rgba(199,155,67,0.3)] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-2 min-h-[56px] w-full touch-manipulation rounded-2xl border border-[#f1d58d]/70 bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-6 py-4 text-base font-bold tracking-wide text-[#171107] shadow-[0_12px_35px_rgba(199,155,67,0.22)] transition hover:brightness-105 hover:shadow-[0_15px_45px_rgba(199,155,67,0.3)] disabled:cursor-not-allowed disabled:opacity-50 sm:text-lg"
                 >
                   {loading ? "🔮 사주를 분석하고 있습니다..." : "사주 분석하기  →"}
                 </button>
