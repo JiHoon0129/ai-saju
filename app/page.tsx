@@ -1753,28 +1753,60 @@ export default function Home() {
     amount?: unknown;
   };
 
+const paymentResult =
+  (await payment.requestPayment({
+    method: "CARD",
+    amount: {
+      currency: "KRW",
+      value: 9900,
+    },
+    orderId,
+    orderName: "프리미엄 사주 상세 분석",
+    windowTarget: "iframe",
+  })) as unknown as {
+    paymentKey?: string;
+    orderId?: string;
+    amount?: number;
+    paymentType?: string;
+  };
+
+console.log("Toss payment result:", paymentResult);
+
 const paymentKey =
-  typeof paymentResult.paymentKey === "string"
-    ? paymentResult.paymentKey
+  typeof paymentResult?.paymentKey === "string"
+    ? paymentResult.paymentKey.trim()
     : "";
 
 const resultOrderId =
-  typeof paymentResult.orderId === "string"
-    ? paymentResult.orderId
+  typeof paymentResult?.orderId === "string"
+    ? paymentResult.orderId.trim()
     : "";
 
-const resultAmount = Number(paymentResult.amount);
+const resultAmount = Number(paymentResult?.amount);
 
-                        if (
-                          !paymentKey ||
-                          resultOrderId !== orderId ||
-                          resultAmount !== 9900
-                        ) {
-                          throw new Error(
-                            "결제 결과 정보가 올바르지 않습니다."
-                          );
-                        }
+if (!paymentKey) {
+  throw new Error(
+    "토스 결제 결과에서 paymentKey를 받지 못했습니다."
+  );
+}
 
+if (!resultOrderId) {
+  throw new Error(
+    "토스 결제 결과에서 orderId를 받지 못했습니다."
+  );
+}
+
+if (resultOrderId !== orderId) {
+  throw new Error(
+    "결제 주문번호가 일치하지 않습니다."
+  );
+}
+
+if (!Number.isFinite(resultAmount) || resultAmount !== 9900) {
+  throw new Error(
+    "결제 금액이 올바르지 않습니다."
+  );
+}
                         const confirmResponse = await fetch(
                           "/api/payment/confirm",
                           {
