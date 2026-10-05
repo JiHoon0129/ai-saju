@@ -436,6 +436,16 @@ export default function Home() {
       return;
     }
 
+    // PC iframe 결제에서는 결제창 내부에서 처리되므로 브라우저 주소에
+    // payment=success가 남는 정상적인 흐름이 없습니다.
+    // 이전 결제 시도의 stale query가 남아 있으면 결제 결과 오류로 오인하지 않고
+    // 주소만 정리한 뒤 현재 저장된 주문 상태를 유지합니다.
+    if (paymentStatus === "success" && !params.get("paymentKey")) {
+      window.history.replaceState({}, "", window.location.pathname);
+      setIsInitializing(false);
+      return;
+    }
+
     if (restoredPremium) {
       if (paymentStatus === "success" || paymentStatus === "fail") {
         clearPendingPayment();
@@ -460,9 +470,10 @@ export default function Home() {
       const orderId = params.get("orderId");
       const amount = Number(params.get("amount"));
 
-      if (!paymentKey || !orderId || !amount) {
-        setPaymentError("결제 결과 정보가 올바르지 않습니다.");
-        setStep("checkout");
+      // Redirect 결과가 불완전한 경우에만 오류로 처리합니다.
+      // 특히 amount가 누락된 URL은 PC iframe 결제의 정상 결과가 아니므로
+      // 잘못된 결제 정보 오류를 보여주지 않고 현재 화면을 유지합니다.
+      if (!paymentKey || !orderId || !Number.isFinite(amount) || amount <= 0) {
         window.history.replaceState({}, "", window.location.pathname);
         setIsInitializing(false);
         return;
@@ -478,7 +489,11 @@ export default function Home() {
         const saved = sessionSaved || localSaved;
         const order = saved ? JSON.parse(saved) : null;
 
-        if (!order || order.orderId !== orderId || order.amount !== amount) {
+        if (
+          !order ||
+          String(order.orderId) !== String(orderId) ||
+          Number(order.amount) !== Number(amount)
+        ) {
           throw new Error("주문 정보 검증에 실패했습니다. 결제 정보가 만료되었을 수 있습니다.");
         }
 
@@ -1496,7 +1511,7 @@ export default function Home() {
                     paymentActiveRef.current = true;
                     window.history.pushState({ paymentSession: true }, "", window.location.href);
 
-                    const isMobile = window.innerWidth < 768;
+                    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
                     if (isMobile) {
                       // 모바일은 Redirect 방식이므로 브라우저 이동 직전에는
@@ -1530,19 +1545,45 @@ export default function Home() {
                         amount?: unknown;
                       };
 
+                      // PC iframe Promise 방식에서는 paymentKey가 핵심 승인 정보입니다.
+                      // orderId/amount는 최초 결제 요청값을 기준으로 서버에 전달하고,
+                      // 서버에서 Toss 승인 결과의 orderId/amount를 최종 검증합니다.
                       const paymentKey =
                         typeof paymentResult?.paymentKey === "string"
-                          ? paymentResult.paymentKey
+                          ? paymentResult.paymentKey.trim()
                           : "";
                       const resultOrderId =
                         typeof paymentResult?.orderId === "string"
-                          ? paymentResult.orderId
-                          : "";
-                      const resultAmount = Number(paymentResult?.amount);
+                          ? paymentResult.orderId.trim()
+                          : orderId;
+                      const resultAmount =
+                        paymentResult?.amount === undefined ||
+                        paymentResult?.amount === null ||
+                        paymentResult?.amount === ""
+                          ? 9900
+                          : Number(paymentResult.amount);
 
-                      if (!paymentKey || resultOrderId !== orderId || resultAmount !== 9900) {
-                        throw new Error("결제 결과 정보가 올바르지 않습니다.");
+                      console.log("Toss payment result", {
+                        paymentKey: paymentKey ? "received" : "missing",
+                        orderId: resultOrderId,
+                        amount: resultAmount,
+                      });
+
+                      if (!paymentKey) {
+                        throw new Error(
+                          "토스 결제 결과에서 paymentKey를 받지 못했습니다. 결제가 완료되지 않았거나 결제창이 종료되었을 수 있습니다."
+                        );
                       }
+
+                      if (resultOrderId !== orderId) {
+                        throw new Error("결제 주문번호가 일치하지 않습니다.");
+                      }
+
+                      if (!Number.isFinite(resultAmount) || resultAmount !== 9900) {
+                        throw new Error("결제 금액이 일치하지 않습니다.");
+                      }
+
+                      paymentActiveRef.current = false;
 
                       const confirmResponse = await fetch("/api/payment/confirm", {
                         method: "POST",
