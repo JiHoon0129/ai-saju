@@ -245,39 +245,6 @@ export default function Home() {
   const mostElement = [...elements].sort((a, b) => b.value - a.value)[0];
   const leastElement = [...elements].sort((a, b) => a.value - b.value)[0];
 
-  // 결제 완료 후 브라우저 뒤로가기로 이전 Toss 결제 URL이 다시 열리는 것을 방지합니다.
-  // 결과 화면을 유지하므로 ?payment=fail이 다시 처리되어 "결제 취소"가 뜨지 않습니다.
-  useEffect(() => {
-    if (!paid) return;
-
-    const keepPremiumResult = () => {
-      window.history.pushState(
-        { sajuResult: true },
-        "",
-        window.location.pathname
-      );
-      setStep("result");
-      setPaymentError("");
-    };
-
-    window.history.replaceState(
-      { sajuResult: true },
-      "",
-      window.location.pathname
-    );
-    window.history.pushState(
-      { sajuResult: true },
-      "",
-      window.location.pathname
-    );
-
-    window.addEventListener("popstate", keepPremiumResult);
-
-    return () => {
-      window.removeEventListener("popstate", keepPremiumResult);
-    };
-  }, [paid]);
-
   const retryPremiumAnalysis = async () => {
     setPaymentError("");
     setPremiumLoading(true);
@@ -387,6 +354,7 @@ export default function Home() {
           setFiveElements(saved.fiveElements || { wood: 0, fire: 0, earth: 0, metal: 0, water: 0 });
           setPremiumAnalysis(saved.premiumAnalysis);
           setPaid(true);
+          setPaymentVerified(true);
           setStep("result");
           restoredPremium = true;
         }
@@ -441,18 +409,19 @@ export default function Home() {
       return;
     }
 
-    // 이미 정상적으로 저장된 프리미엄 결과가 있다면
-    // 브라우저 뒤로가기 등으로 이전 결제 결과 URL(?payment=success/fail)이 다시 나타나도
-    // 결제 취소/실패 화면으로 되돌리지 않습니다.
-    if (restoredPremium && (paymentStatus === "success" || paymentStatus === "fail")) {
-      clearPendingPayment();
-      window.history.replaceState(
-        { sajuResult: true },
-        "",
-        window.location.pathname
-      );
-      setStep("result");
-      setPaymentError("");
+    if (restoredPremium) {
+      if (
+        paymentStatus === "success" ||
+        paymentStatus === "fail"
+      ) {
+        clearPendingPayment();
+        window.history.replaceState(
+          {},
+          "",
+          window.location.pathname
+        );
+      }
+
       setIsInitializing(false);
       return;
     }
@@ -1461,26 +1430,31 @@ export default function Home() {
                     const isDesktop = window.innerWidth >= 768;
 
                     if (isDesktop) {
-                      const paymentResult = await payment.requestPayment({
-                        method: "CARD",
-                        amount: {
-                          currency: "KRW",
-                          value: 9900,
-                        },
-                        orderId,
-                        orderName: "프리미엄 사주 상세 분석",
-                        windowTarget: "iframe",
-                      });
+                      const paymentResult =
+                        (await payment.requestPayment({
+                          method: "CARD",
+                          amount: {
+                            currency: "KRW",
+                            value: 9900,
+                          },
+                          orderId,
+                          orderName: "프리미엄 사주 상세 분석",
+                          windowTarget: "iframe",
+                        })) as unknown as {
+                          paymentKey?: unknown;
+                          orderId?: unknown;
+                          amount?: unknown;
+                        };
 
                       const paymentKey =
-                        typeof paymentResult?.paymentKey === "string"
+                        typeof paymentResult.paymentKey === "string"
                           ? paymentResult.paymentKey
                           : "";
                       const resultOrderId =
-                        typeof paymentResult?.orderId === "string"
+                        typeof paymentResult.orderId === "string"
                           ? paymentResult.orderId
                           : "";
-                      const resultAmount = Number(paymentResult?.amount);
+                      const resultAmount = Number(paymentResult.amount);
 
                       if (
                         !paymentKey ||
