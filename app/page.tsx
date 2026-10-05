@@ -6,6 +6,24 @@ const PREMIUM_RESULT_STORAGE_KEY = "ai_saju_premium_result_v1";
 const PENDING_PAYMENT_STORAGE_KEY = "ai_saju_pending_payment_v1";
 const INITIALIZING_MESSAGE = "AI 사주 결과를 준비하고 있습니다...";
 
+async function readJsonResponse(response: Response): Promise<Record<string, any>> {
+  const raw = await response.text();
+
+  if (!raw.trim()) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(raw) as Record<string, any>;
+  } catch {
+    throw new Error(
+      response.ok
+        ? "서버 응답을 처리하지 못했습니다."
+        : `서버 오류가 발생했습니다. (${response.status})`
+    );
+  }
+}
+
 export default function Home() {
   const [step, setStep] = useState<"home" | "input" | "result" | "service" | "guide" | "support" | "checkout" | "payment-processing" | "legal">("home");
 
@@ -88,7 +106,7 @@ export default function Home() {
         }),
       });
 
-      const data = await response.json();
+      const data = await readJsonResponse(response);
 
       if (!response.ok) {
         throw new Error(data.error || "AI 분석에 실패했습니다.");
@@ -280,7 +298,7 @@ export default function Home() {
         }),
       });
 
-      const premiumData = await premiumResponse.json();
+      const premiumData = await readJsonResponse(premiumResponse);
 
       if (!premiumResponse.ok) {
         throw new Error(
@@ -481,7 +499,7 @@ export default function Home() {
           }),
         });
 
-        const confirmData = await confirmResponse.json();
+        const confirmData = await readJsonResponse(confirmResponse);
 
         if (!confirmResponse.ok) {
           throw new Error(
@@ -508,7 +526,7 @@ export default function Home() {
           }),
         });
 
-        const premiumData = await premiumResponse.json();
+        const premiumData = await readJsonResponse(premiumResponse);
 
         if (!premiumResponse.ok) {
           throw new Error(
@@ -552,6 +570,47 @@ export default function Home() {
     };
 
     void handlePaymentResult();
+  }, []);
+
+  useEffect(() => {
+    const handleBrowserBack = () => {
+      let hasSavedPremiumResult = false;
+
+      try {
+        const savedPremium = localStorage.getItem(PREMIUM_RESULT_STORAGE_KEY);
+        const saved = savedPremium ? JSON.parse(savedPremium) : null;
+
+        hasSavedPremiumResult =
+          saved?.paid === true &&
+          typeof saved?.premiumAnalysis === "string" &&
+          saved.premiumAnalysis.trim().length > 0;
+      } catch (error) {
+        console.error("browser back premium check error", error);
+      }
+
+      if (!hasSavedPremiumResult) {
+        return;
+      }
+
+      // 결제가 이미 끝난 상태에서는 결제창/종료된 세션 화면으로
+      // 되돌아가지 않고 AI 사주 홈으로 이동합니다.
+      setPaymentError("");
+      setPaymentLoading(false);
+      setPremiumLoading(false);
+      setPaymentVerified(false);
+      setPaid(false);
+      setStep("home");
+
+      // 같은 페이지에 현재 상태를 다시 기록하여
+      // 연속 뒤로가기로 결제 세션 화면이 재노출되지 않도록 합니다.
+      window.history.pushState({}, "", window.location.pathname);
+    };
+
+    window.addEventListener("popstate", handleBrowserBack);
+
+    return () => {
+      window.removeEventListener("popstate", handleBrowserBack);
+    };
   }, []);
 
   if (isInitializing) {
@@ -1370,7 +1429,7 @@ export default function Home() {
 
                   try {
                     const configResponse = await fetch("/api/payment/config");
-                    const config = await configResponse.json();
+                    const config = await readJsonResponse(configResponse);
 
                     if (!configResponse.ok || !config.clientKey) {
                       throw new Error(
@@ -1466,7 +1525,7 @@ export default function Home() {
                         }),
                       });
 
-                      const confirmData = await confirmResponse.json();
+                      const confirmData = await readJsonResponse(confirmResponse);
 
                       if (!confirmResponse.ok) {
                         throw new Error(
@@ -1493,7 +1552,7 @@ export default function Home() {
                         }),
                       });
 
-                      const premiumData = await premiumResponse.json();
+                      const premiumData = await readJsonResponse(premiumResponse);
 
                       if (!premiumResponse.ok) {
                         throw new Error(
