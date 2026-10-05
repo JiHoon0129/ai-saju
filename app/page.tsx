@@ -354,7 +354,6 @@ export default function Home() {
           setFiveElements(saved.fiveElements || { wood: 0, fire: 0, earth: 0, metal: 0, water: 0 });
           setPremiumAnalysis(saved.premiumAnalysis);
           setPaid(true);
-          setPaymentVerified(true);
           setStep("result");
           restoredPremium = true;
         }
@@ -409,19 +408,9 @@ export default function Home() {
       return;
     }
 
-    if (restoredPremium) {
-      if (
-        paymentStatus === "success" ||
-        paymentStatus === "fail"
-      ) {
-        clearPendingPayment();
-        window.history.replaceState(
-          {},
-          "",
-          window.location.pathname
-        );
-      }
-
+    if (paymentStatus === "success" && restoredPremium) {
+      clearPendingPayment();
+      window.history.replaceState({}, "", window.location.pathname);
       setIsInitializing(false);
       return;
     }
@@ -1430,31 +1419,32 @@ export default function Home() {
                     const isDesktop = window.innerWidth >= 768;
 
                     if (isDesktop) {
-                      const paymentResult =
-                        (await payment.requestPayment({
-                          method: "CARD",
-                          amount: {
-                            currency: "KRW",
-                            value: 9900,
-                          },
-                          orderId,
-                          orderName: "프리미엄 사주 상세 분석",
-                          windowTarget: "iframe",
-                        })) as unknown as {
-                          paymentKey?: unknown;
-                          orderId?: unknown;
-                          amount?: unknown;
-                        };
+                      const paymentResult = (await payment.requestPayment({
+                        method: "CARD",
+                        amount: {
+                          currency: "KRW",
+                          value: 9900,
+                        },
+                        orderId,
+                        orderName: "프리미엄 사주 상세 분석",
+                        successUrl: `${window.location.origin}/?payment=success`,
+                        failUrl: `${window.location.origin}/?payment=fail`,
+                        windowTarget: "self",
+                      })) as unknown as {
+                        paymentKey?: unknown;
+                        orderId?: unknown;
+                        amount?: unknown;
+                      };
 
                       const paymentKey =
-                        typeof paymentResult.paymentKey === "string"
+                        typeof paymentResult?.paymentKey === "string"
                           ? paymentResult.paymentKey
                           : "";
                       const resultOrderId =
-                        typeof paymentResult.orderId === "string"
+                        typeof paymentResult?.orderId === "string"
                           ? paymentResult.orderId
                           : "";
-                      const resultAmount = Number(paymentResult.amount);
+                      const resultAmount = Number(paymentResult?.amount);
 
                       if (
                         !paymentKey ||
