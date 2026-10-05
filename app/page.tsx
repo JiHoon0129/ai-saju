@@ -6,24 +6,6 @@ const PREMIUM_RESULT_STORAGE_KEY = "ai_saju_premium_result_v1";
 const PENDING_PAYMENT_STORAGE_KEY = "ai_saju_pending_payment_v1";
 const INITIALIZING_MESSAGE = "AI 사주 결과를 준비하고 있습니다...";
 
-async function readJsonResponse(response: Response): Promise<Record<string, any>> {
-  const raw = await response.text();
-
-  if (!raw.trim()) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(raw) as Record<string, any>;
-  } catch {
-    throw new Error(
-      response.ok
-        ? "서버 응답을 처리하지 못했습니다."
-        : `서버 오류가 발생했습니다. (${response.status})`
-    );
-  }
-}
-
 export default function Home() {
   const [step, setStep] = useState<"home" | "input" | "result" | "service" | "guide" | "support" | "checkout" | "payment-processing" | "legal">("home");
 
@@ -60,6 +42,8 @@ export default function Home() {
 
   const birthDateInputRef = useRef<HTMLInputElement>(null);
   const birthTimeInputRef = useRef<HTMLInputElement>(null);
+  const paymentInstanceRef = useRef<any>(null);
+  const paymentActiveRef = useRef(false);
 
   const openBirthDatePicker = () => {
     const input = birthDateInputRef.current as
@@ -68,12 +52,27 @@ export default function Home() {
     input?.showPicker?.();
   };
 
-  const openBirthTimePicker = () => {
-    const input = birthTimeInputRef.current as
-      | (HTMLInputElement & { showPicker?: () => void })
-      | null;
-    input?.showPicker?.();
-  };
+  const birthTimeRanges = [
+    "00:00~01:30",
+    "01:30~03:00",
+    "03:00~04:30",
+    "04:30~06:00",
+    "06:00~07:30",
+    "07:30~09:00",
+    "09:00~10:30",
+    "10:30~12:00",
+    "12:00~13:30",
+    "13:30~15:00",
+    "15:00~16:30",
+    "16:30~18:00",
+    "18:00~19:30",
+    "19:30~21:00",
+    "21:00~22:30",
+    "22:30~00:00",
+  ];
+
+  const getBirthTimeStart = (range: string) => range.split("~")[0] || "";
+
 
   const startAnalysis = async () => {
     if (!birthDate) {
@@ -101,12 +100,12 @@ export default function Home() {
         },
         body: JSON.stringify({
           birthDate,
-          birthTime,
+          birthTime: getBirthTimeStart(birthTime),
           gender,
         }),
       });
 
-      const data = await readJsonResponse(response);
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.error || "AI 분석에 실패했습니다.");
@@ -298,7 +297,7 @@ export default function Home() {
         }),
       });
 
-      const premiumData = await readJsonResponse(premiumResponse);
+      const premiumData = await premiumResponse.json();
 
       if (!premiumResponse.ok) {
         throw new Error(
@@ -350,6 +349,16 @@ export default function Home() {
     }
   };
 
+  const destroyActivePayment = async () => {
+    paymentActiveRef.current = false;
+    try {
+      await paymentInstanceRef.current?.destroy?.();
+    } catch (error) {
+      console.error("payment destroy error", error);
+    }
+    paymentInstanceRef.current = null;
+  };
+
   useEffect(() => {
     let restoredPremium = false;
 
@@ -372,6 +381,7 @@ export default function Home() {
           setFiveElements(saved.fiveElements || { wood: 0, fire: 0, earth: 0, metal: 0, water: 0 });
           setPremiumAnalysis(saved.premiumAnalysis);
           setPaid(true);
+          setPaymentVerified(true);
           setStep("result");
           restoredPremium = true;
         }
@@ -426,9 +436,11 @@ export default function Home() {
       return;
     }
 
-    if (paymentStatus === "success" && restoredPremium) {
-      clearPendingPayment();
-      window.history.replaceState({}, "", window.location.pathname);
+    if (restoredPremium) {
+      if (paymentStatus === "success" || paymentStatus === "fail") {
+        clearPendingPayment();
+        window.history.replaceState({}, "", window.location.pathname);
+      }
       setIsInitializing(false);
       return;
     }
@@ -499,7 +511,7 @@ export default function Home() {
           }),
         });
 
-        const confirmData = await readJsonResponse(confirmResponse);
+        const confirmData = await confirmResponse.json();
 
         if (!confirmResponse.ok) {
           throw new Error(
@@ -526,7 +538,7 @@ export default function Home() {
           }),
         });
 
-        const premiumData = await readJsonResponse(premiumResponse);
+        const premiumData = await premiumResponse.json();
 
         if (!premiumResponse.ok) {
           throw new Error(
@@ -573,45 +585,43 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const handleBrowserBack = () => {
-      let hasSavedPremiumResult = false;
-
-      try {
-        const savedPremium = localStorage.getItem(PREMIUM_RESULT_STORAGE_KEY);
-        const saved = savedPremium ? JSON.parse(savedPremium) : null;
-
-        hasSavedPremiumResult =
-          saved?.paid === true &&
-          typeof saved?.premiumAnalysis === "string" &&
-          saved.premiumAnalysis.trim().length > 0;
-      } catch (error) {
-        console.error("browser back premium check error", error);
-      }
-
-      if (!hasSavedPremiumResult) {
+    const handlePopState = () => {
+      if (paymentActiveRef.current) {
+        void destroyActivePayment();
+        setPaymentLoading(false);
+        setPremiumLoading(false);
+        setPaymentError("결제창이 닫혔습니다. 결제를 다시 진행해주세요.");
+        setStep("checkout");
+        window.history.replaceState({}, "", window.location.pathname);
         return;
       }
 
-      // 결제가 이미 끝난 상태에서는 결제창/종료된 세션 화면으로
-      // 되돌아가지 않고 AI 사주 홈으로 이동합니다.
-      setPaymentError("");
-      setPaymentLoading(false);
-      setPremiumLoading(false);
-      setPaymentVerified(false);
-      setPaid(false);
-      setStep("home");
+      if (step === "payment-processing") {
+        setPaymentLoading(false);
+        setPremiumLoading(false);
+        setStep("checkout");
+        return;
+      }
 
-      // 같은 페이지에 현재 상태를 다시 기록하여
-      // 연속 뒤로가기로 결제 세션 화면이 재노출되지 않도록 합니다.
-      window.history.pushState({}, "", window.location.pathname);
+      if (paid && premiumAnalysis.trim()) {
+        setStep("home");
+      }
     };
 
-    window.addEventListener("popstate", handleBrowserBack);
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!paymentActiveRef.current) return;
+      event.preventDefault();
+      event.returnValue = "결제가 진행 중입니다. 새로고침하면 결제창이 종료될 수 있습니다.";
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
-      window.removeEventListener("popstate", handleBrowserBack);
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, []);
+  }, [step, paid, premiumAnalysis]);
 
   if (isInitializing) {
     return (
@@ -813,15 +823,22 @@ export default function Home() {
                   <label className="mb-2 block text-sm font-semibold text-[#ead29a]">
                     태어난 시간
                   </label>
-                  <input
-                    ref={birthTimeInputRef}
-                    type="time"
+                  <select
                     value={birthTime}
                     onChange={(e) => setBirthTime(e.target.value)}
-                    onClick={openBirthTimePicker}
-                    aria-label="태어난 시간 선택"
-                    className="w-full cursor-pointer rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-[17px] text-white outline-none transition focus:border-[#d8b46a]/80 focus:bg-white/[0.08] focus:ring-1 focus:ring-[#d8b46a]/25"
-                  />
+                    aria-label="태어난 시간대 선택"
+                    className="w-full cursor-pointer appearance-none rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-[17px] text-white outline-none transition focus:border-[#d8b46a]/80 focus:bg-white/[0.08] focus:ring-1 focus:ring-[#d8b46a]/25"
+                  >
+                    <option value="" className="bg-[#08101b]">태어난 시간대를 선택해주세요</option>
+                    {birthTimeRanges.map((range) => (
+                      <option key={range} value={range} className="bg-[#08101b]">
+                        {range}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-2 text-xs leading-5 text-white/35">
+                    정확한 출생시간을 모르는 경우 해당 시간대를 선택해주세요.
+                  </p>
                 </div>
 
                 <div>
@@ -1429,7 +1446,7 @@ export default function Home() {
 
                   try {
                     const configResponse = await fetch("/api/payment/config");
-                    const config = await readJsonResponse(configResponse);
+                    const config = await configResponse.json();
 
                     if (!configResponse.ok || !config.clientKey) {
                       throw new Error(
@@ -1451,6 +1468,7 @@ export default function Home() {
                     const payment = tossPayments.payment({
                       customerKey,
                     });
+                    paymentInstanceRef.current = payment;
 
                     const orderId = `SAJU-${Date.now()}-${Math.random()
                       .toString(36)
@@ -1461,7 +1479,8 @@ export default function Home() {
                       orderId,
                       amount: 9900,
                       birthDate,
-                      birthTime,
+                      birthTime: getBirthTimeStart(birthTime),
+                      birthTimeRange: birthTime,
                       gender,
                       analysis,
                       fourPillars,
@@ -1474,11 +1493,16 @@ export default function Home() {
                     );
                     savePendingPayment(pendingOrder);
                     setStep("payment-processing");
+                    paymentActiveRef.current = true;
+                    window.history.pushState({ paymentSession: true }, "", window.location.href);
 
-                    const isDesktop = window.innerWidth >= 768;
+                    const isMobile = window.innerWidth < 768;
 
-                    if (isDesktop) {
-                      const paymentResult = (await payment.requestPayment({
+                    if (isMobile) {
+                      // 모바일은 Redirect 방식이므로 브라우저 이동 직전에는
+                      // 결제 진행 보호 상태를 해제합니다.
+                      paymentActiveRef.current = false;
+                      await payment.requestPayment({
                         method: "CARD",
                         amount: {
                           currency: "KRW",
@@ -1489,6 +1513,17 @@ export default function Home() {
                         successUrl: `${window.location.origin}/?payment=success`,
                         failUrl: `${window.location.origin}/?payment=fail`,
                         windowTarget: "self",
+                      });
+                    } else {
+                      const paymentResult = (await payment.requestPayment({
+                        method: "CARD",
+                        amount: {
+                          currency: "KRW",
+                          value: 9900,
+                        },
+                        orderId,
+                        orderName: "프리미엄 사주 상세 분석",
+                        windowTarget: "iframe",
                       })) as unknown as {
                         paymentKey?: unknown;
                         orderId?: unknown;
@@ -1505,11 +1540,7 @@ export default function Home() {
                           : "";
                       const resultAmount = Number(paymentResult?.amount);
 
-                      if (
-                        !paymentKey ||
-                        resultOrderId !== orderId ||
-                        resultAmount !== 9900
-                      ) {
+                      if (!paymentKey || resultOrderId !== orderId || resultAmount !== 9900) {
                         throw new Error("결제 결과 정보가 올바르지 않습니다.");
                       }
 
@@ -1525,12 +1556,10 @@ export default function Home() {
                         }),
                       });
 
-                      const confirmData = await readJsonResponse(confirmResponse);
+                      const confirmData = await confirmResponse.json();
 
                       if (!confirmResponse.ok) {
-                        throw new Error(
-                          confirmData.error || "결제 승인에 실패했습니다."
-                        );
+                        throw new Error(confirmData.error || "결제 승인에 실패했습니다.");
                       }
 
                       markPaymentVerified({
@@ -1552,12 +1581,11 @@ export default function Home() {
                         }),
                       });
 
-                      const premiumData = await readJsonResponse(premiumResponse);
+                      const premiumData = await premiumResponse.json();
 
                       if (!premiumResponse.ok) {
                         throw new Error(
-                          premiumData.error ||
-                            "상세 사주 분석 생성에 실패했습니다."
+                          premiumData.error || "상세 사주 분석 생성에 실패했습니다."
                         );
                       }
 
@@ -1579,44 +1607,22 @@ export default function Home() {
                         birthTime: pendingOrder.birthTime,
                         gender: pendingOrder.gender,
                         analysis: pendingOrder.analysis || "",
-                        fourPillars:
-                          pendingOrder.fourPillars || {
-                            year: "",
-                            month: "",
-                            day: "",
-                            time: "",
-                          },
-                        fiveElements:
-                          pendingOrder.fiveElements || {
-                            wood: 0,
-                            fire: 0,
-                            earth: 0,
-                            metal: 0,
-                            water: 0,
-                          },
+                        fourPillars: pendingOrder.fourPillars || { year: "", month: "", day: "", time: "" },
+                        fiveElements: pendingOrder.fiveElements || { wood: 0, fire: 0, earth: 0, metal: 0, water: 0 },
                         premiumAnalysis: finalPremiumAnalysis,
                         paid: true,
                       });
 
+                      paymentActiveRef.current = false;
+                      paymentInstanceRef.current = null;
                       sessionStorage.removeItem("saju_payment_order");
                       clearPendingPayment();
                       setPaymentLoading(false);
-                    } else {
-                      await payment.requestPayment({
-                        method: "CARD",
-                        amount: {
-                          currency: "KRW",
-                          value: 9900,
-                        },
-                        orderId,
-                        orderName: "프리미엄 사주 상세 분석",
-                        successUrl: `${window.location.origin}/?payment=success`,
-                        failUrl: `${window.location.origin}/?payment=fail`,
-                        windowTarget: "self",
-                      });
+                      window.history.replaceState({}, "", window.location.pathname);
                     }
                   } catch (error) {
                     console.error(error);
+                    void destroyActivePayment();
                     setPaymentError(
                       error instanceof Error
                         ? error.message
