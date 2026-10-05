@@ -6,6 +6,24 @@ const PREMIUM_RESULT_STORAGE_KEY = "ai_saju_premium_result_v1";
 const PENDING_PAYMENT_STORAGE_KEY = "ai_saju_pending_payment_v1";
 const INITIALIZING_MESSAGE = "AI 사주 결과를 준비하고 있습니다...";
 
+async function readJsonResponse(response: Response): Promise<Record<string, any>> {
+  const raw = await response.text();
+  if (!raw.trim()) return {};
+  try {
+    return JSON.parse(raw) as Record<string, any>;
+  } catch {
+    throw new Error(response.ok ? "서버 응답을 처리하지 못했습니다." : `서버 오류가 발생했습니다. (${response.status})`);
+  }
+}
+
+function getPaymentErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "");
+  const normalized = message.toLowerCase();
+  if (normalized.includes("user_cancel") || normalized.includes("user cancel") || normalized.includes("취소")) return "결제가 취소되었습니다. 결제하지 않고 이전 화면으로 돌아왔습니다.";
+  if (normalized.includes("timeout") || normalized.includes("network") || normalized.includes("failed to fetch")) return "네트워크 문제로 결제 상태를 확인하지 못했습니다. 결제 내역을 다시 확인해주세요.";
+  return message || "결제 처리 중 오류가 발생했습니다.";
+}
+
 export default function Home() {
   const [step, setStep] = useState<"home" | "input" | "result" | "service" | "guide" | "support" | "checkout" | "payment-processing" | "legal">("home");
 
@@ -33,6 +51,7 @@ export default function Home() {
   const [premiumAnalysis, setPremiumAnalysis] = useState("");
   const [paymentError, setPaymentError] = useState("");
   const [paymentVerified, setPaymentVerified] = useState(false);
+  const [hasPendingPaymentKey, setHasPendingPaymentKey] = useState(false);
   const [legalPage, setLegalPage] = useState<"terms" | "privacy" | "refund" | "business">("terms");
 
   const [birthDate, setBirthDate] = useState("");
@@ -105,7 +124,7 @@ export default function Home() {
         }),
       });
 
-      const data = await response.json();
+      const data = await readJsonResponse(response);
 
       if (!response.ok) {
         throw new Error(data.error || "AI 분석에 실패했습니다.");
@@ -208,6 +227,7 @@ export default function Home() {
 
     savePendingPayment(verifiedOrder);
     setPaymentVerified(true);
+    setHasPendingPaymentKey(true);
   };
 
   const clearPendingPayment = () => {
@@ -216,6 +236,7 @@ export default function Home() {
     } catch (error) {
       console.error("pending payment clear error", error);
     }
+    setHasPendingPaymentKey(false);
   };
 
   const clearPremiumResult = () => {
@@ -235,6 +256,7 @@ export default function Home() {
     setPremiumAnalysis("");
     setPaymentError("");
     setPaymentVerified(false);
+    setHasPendingPaymentKey(false);
     setFourPillars({
       year: "",
       month: "",
@@ -297,7 +319,7 @@ export default function Home() {
         }),
       });
 
-      const premiumData = await premiumResponse.json();
+      const premiumData = await readJsonResponse(premiumResponse);
 
       if (!premiumResponse.ok) {
         throw new Error(
@@ -346,6 +368,42 @@ export default function Home() {
       setStep("checkout");
     } finally {
       setPremiumLoading(false);
+    }
+  };
+
+  const retryPaymentConfirmation = async () => {
+    setPaymentError("");
+    setPaymentLoading(true);
+    setStep("payment-processing");
+
+    try {
+      const sessionSaved = sessionStorage.getItem("saju_payment_order");
+      const localSaved = localStorage.getItem(PENDING_PAYMENT_STORAGE_KEY);
+      const saved = sessionSaved || localSaved;
+      const order = saved ? JSON.parse(saved) : null;
+      const paymentKey = typeof order?.paymentKey === "string" ? order.paymentKey.trim() : "";
+
+      if (!order || !paymentKey || !order.orderId || Number(order.amount) !== 9900) {
+        throw new Error("확인할 결제 정보가 없습니다. 결제를 다시 진행해주세요.");
+      }
+
+      const confirmResponse = await fetch("/api/payment/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentKey, orderId: order.orderId, amount: 9900 }),
+      });
+      const confirmData = await readJsonResponse(confirmResponse);
+
+      if (!confirmResponse.ok) throw new Error(confirmData.error || "결제 승인 확인에 실패했습니다.");
+
+      markPaymentVerified({ ...order, amount: 9900, paymentKey });
+      await retryPremiumAnalysis();
+    } catch (error) {
+      console.error("payment confirmation retry error", error);
+      setPaymentError(getPaymentErrorMessage(error));
+      setStep("checkout");
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
@@ -409,7 +467,9 @@ export default function Home() {
 
         if (pending) {
           setBirthDate(pending.birthDate || "");
-          setPaymentVerified(pending.paymentVerified === true && typeof pending.paymentKey === "string" && pending.paymentKey.length > 0);
+          const restoredPaymentKey = typeof pending.paymentKey === "string" && pending.paymentKey.trim().length > 0;
+          setPaymentVerified(pending.paymentVerified === true && restoredPaymentKey);
+          setHasPendingPaymentKey(restoredPaymentKey);
           setBirthTime(pending.birthTime || "");
           setGender(pending.gender || "");
           setAnalysis(pending.analysis || "");
@@ -526,7 +586,7 @@ export default function Home() {
           }),
         });
 
-        const confirmData = await confirmResponse.json();
+        const confirmData = await readJsonResponse(confirmResponse);
 
         if (!confirmResponse.ok) {
           throw new Error(
@@ -553,7 +613,7 @@ export default function Home() {
           }),
         });
 
-        const premiumData = await premiumResponse.json();
+        const premiumData = await readJsonResponse(premiumResponse);
 
         if (!premiumResponse.ok) {
           throw new Error(
@@ -583,11 +643,7 @@ export default function Home() {
         window.history.replaceState({}, "", window.location.pathname);
       } catch (error) {
         console.error(error);
-        setPaymentError(
-          error instanceof Error
-            ? error.message
-            : "결제 처리 중 오류가 발생했습니다."
-        );
+        setPaymentError(getPaymentErrorMessage(error));
         setStep("checkout");
       } finally {
         setPremiumLoading(false);
@@ -1368,7 +1424,7 @@ export default function Home() {
             <button
               onClick={() => {
                 setPaymentError("");
-                setStep("result");
+                setStep(paid ? "result" : "input");
               }}
               className="mb-8 text-sm text-white/45 hover:text-[#e7c982]"
             >
@@ -1443,6 +1499,19 @@ export default function Home() {
                     {premiumLoading ? "상세 분석을 다시 생성하고 있습니다..." : "상세 사주 분석 다시 생성하기"}
                   </button>
                 </div>
+              ) : hasPendingPaymentKey ? (
+                <div className="mt-5 space-y-3">
+                  <div className="rounded-2xl border border-amber-400/20 bg-amber-400/[0.06] p-4 text-sm leading-6 text-amber-100/80">
+                    결제는 진행되었지만 승인 확인이 완료되지 않았습니다. 추가 결제 없이 기존 결제 승인을 다시 확인합니다.
+                  </div>
+                  <button
+                    disabled={paymentLoading}
+                    onClick={retryPaymentConfirmation}
+                    className="w-full rounded-2xl bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-5 py-4 text-lg font-bold text-[#171107] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {paymentLoading ? "결제 승인 확인 중..." : "기존 결제 승인 다시 확인하기"}
+                  </button>
+                </div>
               ) : (
               <button
                 disabled={paymentLoading}
@@ -1461,7 +1530,7 @@ export default function Home() {
 
                   try {
                     const configResponse = await fetch("/api/payment/config");
-                    const config = await configResponse.json();
+                    const config = await readJsonResponse(configResponse);
 
                     if (!configResponse.ok || !config.clientKey) {
                       throw new Error(
@@ -1596,6 +1665,15 @@ export default function Home() {
 
                       paymentActiveRef.current = false;
 
+                      const verifiedPendingOrder = {
+                        ...pendingOrder,
+                        paymentKey,
+                        paymentVerified: false,
+                      };
+                      sessionStorage.setItem("saju_payment_order", JSON.stringify(verifiedPendingOrder));
+                      savePendingPayment(verifiedPendingOrder);
+                      setHasPendingPaymentKey(true);
+
                       const confirmResponse = await fetch("/api/payment/confirm", {
                         method: "POST",
                         headers: {
@@ -1608,7 +1686,7 @@ export default function Home() {
                         }),
                       });
 
-                      const confirmData = await confirmResponse.json();
+                      const confirmData = await readJsonResponse(confirmResponse);
 
                       if (!confirmResponse.ok) {
                         throw new Error(confirmData.error || "결제 승인에 실패했습니다.");
@@ -1633,7 +1711,7 @@ export default function Home() {
                         }),
                       });
 
-                      const premiumData = await premiumResponse.json();
+                      const premiumData = await readJsonResponse(premiumResponse);
 
                       if (!premiumResponse.ok) {
                         throw new Error(
@@ -1675,11 +1753,7 @@ export default function Home() {
                   } catch (error) {
                     console.error(error);
                     void destroyActivePayment();
-                    setPaymentError(
-                      error instanceof Error
-                        ? error.message
-                        : "결제 요청 중 오류가 발생했습니다."
-                    );
+                    setPaymentError(getPaymentErrorMessage(error));
                     setPaymentLoading(false);
                     setStep("checkout");
                   }
