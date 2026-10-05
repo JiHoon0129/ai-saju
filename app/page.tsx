@@ -1556,12 +1556,17 @@ export default function Home() {
                         typeof paymentResult?.orderId === "string"
                           ? paymentResult.orderId.trim()
                           : orderId;
+                      const rawAmount = paymentResult?.amount;
                       const resultAmount =
-                        paymentResult?.amount === undefined ||
-                        paymentResult?.amount === null ||
-                        paymentResult?.amount === ""
-                          ? 9900
-                          : Number(paymentResult.amount);
+                        rawAmount &&
+                        typeof rawAmount === "object" &&
+                        "value" in (rawAmount as Record<string, unknown>)
+                          ? Number((rawAmount as Record<string, unknown>).value)
+                          : rawAmount === undefined ||
+                              rawAmount === null ||
+                              rawAmount === ""
+                            ? 9900
+                            : Number(rawAmount);
 
                       console.log("Toss payment result", {
                         paymentKey: paymentKey ? "received" : "missing",
@@ -1579,8 +1584,14 @@ export default function Home() {
                         throw new Error("결제 주문번호가 일치하지 않습니다.");
                       }
 
-                      if (!Number.isFinite(resultAmount) || resultAmount !== 9900) {
-                        throw new Error("결제 금액이 일치하지 않습니다.");
+                      if (!Number.isFinite(resultAmount)) {
+                        throw new Error("토스 결제 결과의 금액 정보를 확인할 수 없습니다.");
+                      }
+
+                      if (resultAmount !== 9900) {
+                        throw new Error(
+                          `결제 금액이 일치하지 않습니다. (요청 금액: 9,900원 / 토스 결과: ${resultAmount.toLocaleString()}원)`
+                        );
                       }
 
                       paymentActiveRef.current = false;
