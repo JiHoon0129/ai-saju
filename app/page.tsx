@@ -1737,28 +1737,33 @@ export default function Home() {
                       const isDesktop = window.innerWidth >= 768;
 
                       if (isDesktop) {
-                        const paymentResult = await payment.requestPayment({
-                          method: "CARD",
-                          amount: {
-                            currency: "KRW",
-                            value: 9900,
-                          },
-                          orderId,
-                          orderName: "프리미엄 사주 상세 분석",
-                          windowTarget: "iframe",
-                        });
+                      const paymentResult =
+  (await payment.requestPayment({
+    method: "CARD",
+    amount: {
+      currency: "KRW",
+      value: 9900,
+    },
+    orderId,
+    orderName: "프리미엄 사주 상세 분석",
+    windowTarget: "iframe",
+  })) as unknown as {
+    paymentKey?: unknown;
+    orderId?: unknown;
+    amount?: unknown;
+  };
 
-                        const paymentKey =
-                          typeof paymentResult?.paymentKey === "string"
-                            ? paymentResult.paymentKey
-                            : "";
+const paymentKey =
+  typeof paymentResult.paymentKey === "string"
+    ? paymentResult.paymentKey
+    : "";
 
-                        const resultOrderId =
-                          typeof paymentResult?.orderId === "string"
-                            ? paymentResult.orderId
-                            : "";
+const resultOrderId =
+  typeof paymentResult.orderId === "string"
+    ? paymentResult.orderId
+    : "";
 
-                        const resultAmount = Number(paymentResult?.amount);
+const resultAmount = Number(paymentResult.amount);
 
                         if (
                           !paymentKey ||
