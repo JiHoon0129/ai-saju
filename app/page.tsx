@@ -322,6 +322,7 @@ export default function Home() {
       setBirthTime(order.birthTime || "");
       setGender(order.gender || "");
       setAnalysis(order.analysis || "");
+
       setFourPillars(
         order.fourPillars || {
           year: "",
@@ -330,6 +331,7 @@ export default function Home() {
           time: "",
         }
       );
+
       setFiveElements(
         order.fiveElements || {
           wood: 0,
@@ -339,6 +341,7 @@ export default function Home() {
           water: 0,
         }
       );
+
       setPremiumAnalysis(finalPremiumAnalysis);
       setPaid(true);
       setStep("result");
@@ -373,11 +376,13 @@ export default function Home() {
       window.history.replaceState({}, "", window.location.pathname);
     } catch (error) {
       console.error("premium retry error", error);
+
       setPaymentError(
         error instanceof Error
           ? error.message
           : "상세 사주 분석 재생성 중 오류가 발생했습니다."
       );
+
       setStep("checkout");
     } finally {
       setPremiumLoading(false);
@@ -402,6 +407,7 @@ export default function Home() {
           setBirthTime(saved.birthTime || "");
           setGender(saved.gender || "");
           setAnalysis(saved.analysis || "");
+
           setFourPillars(
             saved.fourPillars || {
               year: "",
@@ -410,6 +416,7 @@ export default function Home() {
               time: "",
             }
           );
+
           setFiveElements(
             saved.fiveElements || {
               wood: 0,
@@ -419,6 +426,7 @@ export default function Home() {
               water: 0,
             }
           );
+
           setPremiumAnalysis(saved.premiumAnalysis);
           setPaid(true);
           setStep("result");
@@ -427,6 +435,7 @@ export default function Home() {
       }
     } catch (error) {
       console.error("premium result restore error", error);
+
       try {
         localStorage.removeItem(PREMIUM_RESULT_STORAGE_KEY);
       } catch {
@@ -447,11 +456,13 @@ export default function Home() {
 
         if (pending) {
           setBirthDate(pending.birthDate || "");
+
           setPaymentVerified(
             pending.paymentVerified === true &&
               typeof pending.paymentKey === "string" &&
               pending.paymentKey.length > 0
           );
+
           setBirthTime(pending.birthTime || "");
           setGender(pending.gender || "");
           setAnalysis(pending.analysis || "");
@@ -497,6 +508,7 @@ export default function Home() {
         setPaymentError(
           params.get("message") || "결제가 취소되었거나 실패했습니다."
         );
+
         setStep("checkout");
         window.history.replaceState({}, "", window.location.pathname);
         setIsInitializing(false);
@@ -640,11 +652,13 @@ export default function Home() {
         window.history.replaceState({}, "", window.location.pathname);
       } catch (error) {
         console.error(error);
+
         setPaymentError(
           error instanceof Error
             ? error.message
             : "결제 처리 중 오류가 발생했습니다."
         );
+
         setStep("checkout");
       } finally {
         setPremiumLoading(false);
@@ -663,9 +677,11 @@ export default function Home() {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[#d8b46a]/35 bg-[#d8b46a]/[0.06]">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/10 border-t-[#f0d18a]" />
           </div>
+
           <p className="mt-5 text-xs font-semibold tracking-[0.2em] text-[#d8b46a]">
             AI SAJU
           </p>
+
           <p className="mt-2 text-sm text-white/55">
             {INITIALIZING_MESSAGE}
           </p>
@@ -676,7 +692,6 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#070b13] text-white">
-      {/* ==================== HOME ==================== */}
       {step === "home" && (
         <section
           className="relative min-h-screen overflow-hidden"
@@ -698,6 +713,7 @@ export default function Home() {
               <span className="flex h-11 w-11 items-center justify-center rounded-full border border-[#d8b46a]/60 bg-[#0b1019]/70 text-lg text-[#e7c982] shadow-[0_0_25px_rgba(216,180,106,0.12)] backdrop-blur-md transition group-hover:border-[#e7c982]">
                 ☯
               </span>
+
               <span className="text-xl font-semibold tracking-[0.14em] text-[#ead29a] sm:text-2xl lg:text-[26px]">
                 AI 사주
               </span>
@@ -710,12 +726,14 @@ export default function Home() {
               >
                 서비스 소개
               </button>
+
               <button
                 onClick={() => setStep("guide")}
                 className="transition hover:text-[#e8cc8d]"
               >
                 이용안내
               </button>
+
               <button
                 onClick={() => setStep("support")}
                 className="transition hover:text-[#e8cc8d]"
@@ -769,12 +787,15 @@ export default function Home() {
                 <span className="block text-xs font-semibold tracking-[0.22em] text-[#d8b46a]">
                   AI SAJU
                 </span>
+
                 <span className="mt-2 block text-xl font-semibold text-white sm:text-2xl">
                   나의 사주 분석 시작하기
                 </span>
+
                 <span className="mt-2 block text-sm text-white/45">
                   생년월일과 태어난 시간을 입력해 나만의 사주를 확인해보세요.
                 </span>
+
                 <span className="mt-5 inline-flex rounded-2xl bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-10 py-4 text-base font-bold text-[#171107] shadow-[0_12px_35px_rgba(199,155,67,0.22)] transition group-hover:brightness-105 sm:text-lg">
                   사주 시작하기  →
                 </span>
@@ -799,9 +820,11 @@ export default function Home() {
                   <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full border border-[#d8b46a]/45 bg-[#d8b46a]/[0.06] text-lg text-[#e7c982]">
                     {icon}
                   </div>
+
                   <p className="text-xs font-semibold text-white sm:text-sm">
                     {title}
                   </p>
+
                   <p className="mt-1 text-[10px] leading-4 text-white/40 sm:text-xs">
                     {desc}
                   </p>
@@ -819,6 +842,7 @@ export default function Home() {
               >
                 이용약관
               </button>
+
               <button
                 onClick={() => {
                   setLegalPage("privacy");
@@ -828,6 +852,7 @@ export default function Home() {
               >
                 개인정보처리방침
               </button>
+
               <button
                 onClick={() => {
                   setLegalPage("refund");
@@ -837,6 +862,7 @@ export default function Home() {
               >
                 환불정책
               </button>
+
               <button
                 onClick={() => {
                   setLegalPage("business");
@@ -851,7 +877,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* ==================== INPUT ==================== */}
       {step === "input" && (
         <section
           className="min-h-screen px-5 py-8 sm:px-6 sm:py-12"
@@ -875,9 +900,11 @@ export default function Home() {
                 <p className="mb-3 text-xs font-semibold tracking-[0.22em] text-[#d8b46a]">
                   AI SAJU
                 </p>
+
                 <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                   사주 정보 입력
                 </h2>
+
                 <p className="mt-3 text-sm leading-6 text-white/45 sm:text-base">
                   생년월일과 태어난 시간을 입력하면
                   <br />
@@ -890,6 +917,7 @@ export default function Home() {
                   <label className="mb-2 block text-sm font-semibold text-[#ead29a]">
                     생년월일
                   </label>
+
                   <input
                     ref={birthDateInputRef}
                     type="date"
@@ -905,6 +933,7 @@ export default function Home() {
                   <label className="mb-2 block text-sm font-semibold text-[#ead29a]">
                     태어난 시간
                   </label>
+
                   <input
                     ref={birthTimeInputRef}
                     type="time"
@@ -920,6 +949,7 @@ export default function Home() {
                   <label className="mb-2 block text-sm font-semibold text-[#ead29a]">
                     성별
                   </label>
+
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => setGender("남성")}
@@ -931,6 +961,7 @@ export default function Home() {
                     >
                       남성
                     </button>
+
                     <button
                       onClick={() => setGender("여성")}
                       className={`rounded-2xl border px-4 py-4 font-semibold transition ${
@@ -964,7 +995,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* ==================== RESULT ==================== */}
       {step === "result" && (
         <section className="min-h-screen bg-[#070b13] px-4 py-8 sm:px-6 sm:py-12">
           <div className="mx-auto max-w-4xl">
@@ -972,12 +1002,15 @@ export default function Home() {
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[#d8b46a]/45 bg-[#d8b46a]/[0.07] text-2xl text-[#e7c982] shadow-[0_0_30px_rgba(216,180,106,0.08)]">
                 ✦
               </div>
+
               <p className="mb-2 text-xs font-semibold tracking-[0.22em] text-[#d8b46a]">
                 AI SAJU ANALYSIS
               </p>
+
               <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                 AI 사주 분석 결과
               </h2>
+
               <p className="mt-3 text-sm leading-6 text-white/45">
                 입력하신 생년월일과 태어난 시간을 바탕으로
                 <br />
@@ -1005,6 +1038,7 @@ export default function Home() {
                 <p className="text-sm font-semibold text-[#e7c982]">
                   📋 입력 정보
                 </p>
+
                 <span className="rounded-full border border-[#d8b46a]/20 bg-[#d8b46a]/[0.05] px-3 py-1 text-[10px] text-[#d8b46a]">
                   {paid ? "PREMIUM SAJU" : "MY SAJU"}
                 </span>
@@ -1023,6 +1057,7 @@ export default function Home() {
                     <p className="text-[10px] text-white/35 sm:text-xs">
                       {label}
                     </p>
+
                     <p className="mt-1 text-xs font-semibold text-white sm:text-sm">
                       {value}
                     </p>
@@ -1036,6 +1071,7 @@ export default function Home() {
                 <p className="text-sm font-semibold text-[#e7c982]">
                   🔮 사주 원국
                 </p>
+
                 <span className="text-[10px] tracking-[0.15em] text-white/30">
                   FOUR PILLARS
                 </span>
@@ -1053,6 +1089,7 @@ export default function Home() {
                     className="rounded-2xl border border-[#d8b46a]/15 bg-[#0b111b] p-5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                   >
                     <div className="text-xs text-white/35">{label}</div>
+
                     <div className="mt-2 text-xl font-bold text-[#f0d18a] sm:text-2xl">
                       {value}
                     </div>
@@ -1066,6 +1103,7 @@ export default function Home() {
                 <p className="text-sm font-semibold text-[#e7c982]">
                   🌿 오행 분석
                 </p>
+
                 <span className="text-[10px] tracking-[0.15em] text-white/30">
                   FIVE ELEMENTS
                 </span>
@@ -1083,6 +1121,7 @@ export default function Home() {
                         <span className="text-sm font-semibold text-[#e7c982]">
                           {element.value}개
                         </span>
+
                         <span className="ml-2 rounded-full bg-[#d8b46a]/10 px-2 py-1 text-[10px] text-[#e7c982]">
                           {element.value >= 3
                             ? "많음"
@@ -1118,16 +1157,26 @@ export default function Home() {
 
               <div className="mb-5 grid grid-cols-2 gap-3">
                 <div className="rounded-2xl border border-[#d8b46a]/15 bg-[#d8b46a]/[0.06] p-4">
-                  <p className="text-xs text-white/40">가장 많은 오행</p>
+                  <p className="text-xs text-white/40">
+                    가장 많은 오행
+                  </p>
+
                   <p className="mt-1 text-lg font-bold text-[#f0d18a]">
-                    {hasElementData ? mostElement.name : "분석 데이터 없음"}
+                    {hasElementData
+                      ? mostElement.name
+                      : "분석 데이터 없음"}
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-white/[0.06] bg-white/[0.025] p-4">
-                  <p className="text-xs text-white/40">가장 적은 오행</p>
+                  <p className="text-xs text-white/40">
+                    가장 적은 오행
+                  </p>
+
                   <p className="mt-1 text-lg font-bold text-white/75">
-                    {hasElementData ? leastElement.name : "분석 데이터 없음"}
+                    {hasElementData
+                      ? leastElement.name
+                      : "분석 데이터 없음"}
                   </p>
                 </div>
               </div>
@@ -1189,13 +1238,13 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Free result */}
             <div className="mb-5 rounded-[26px] border border-[#d8b46a]/20 bg-white/[0.035] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.18)] sm:p-6">
               <div className="mb-5 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-[#e7c982]">
                     🧠 AI 분석 내용
                   </p>
+
                   <p className="mt-1 text-xs text-white/35">
                     기본 분석 결과
                   </p>
@@ -1213,9 +1262,11 @@ export default function Home() {
                   .slice(0, 3)
                   .map((section, index) => {
                     const lines = section.trim().split("\n");
+
                     const title =
                       lines[0]?.replace(/^#\s*/, "") ||
                       `분석 ${index + 1}`;
+
                     const content = lines.slice(1).join("\n").trim();
 
                     return (
@@ -1226,6 +1277,7 @@ export default function Home() {
                         <h3 className="mb-3 text-lg font-bold text-[#f0d18a]">
                           {title}
                         </h3>
+
                         <p className="whitespace-pre-line text-sm leading-7 text-white/65">
                           {content}
                         </p>
@@ -1245,6 +1297,7 @@ export default function Home() {
                       <p className="font-semibold text-[#f0d18a]">
                         더 깊은 사주 분석을 확인해보세요
                       </p>
+
                       <p className="mt-1 text-xs leading-5 text-white/45">
                         재물운, 직업운, 연애운, 대인관계와 시기별 흐름까지
                         상세하게 확인할 수 있습니다.
@@ -1294,7 +1347,6 @@ export default function Home() {
               )}
             </div>
 
-            {/* Premium result */}
             {paid && (
               <div className="mb-5 rounded-[26px] border border-[#d8b46a]/35 bg-gradient-to-b from-[#d8b46a]/[0.09] to-white/[0.025] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.2)] sm:p-6">
                 <div className="mb-6 flex items-center justify-between">
@@ -1326,9 +1378,11 @@ export default function Home() {
                       .filter((section) => section.trim())
                       .map((section, index) => {
                         const lines = section.trim().split("\n");
+
                         const title =
                           lines[0]?.replace(/^#\s*/, "") ||
                           `상세 분석 ${index + 1}`;
+
                         const content = lines.slice(1).join("\n").trim();
 
                         return (
@@ -1339,6 +1393,7 @@ export default function Home() {
                             <h4 className="text-base font-bold text-[#f0d18a]">
                               {title}
                             </h4>
+
                             <p className="mt-2 whitespace-pre-line text-sm leading-7 text-white/60">
                               {content}
                             </p>
@@ -1472,7 +1527,10 @@ export default function Home() {
                   "3. 상세 분석",
                   "프리미엄 상세 분석이 필요한 경우 결제 화면으로 이동합니다.",
                 ],
-                ["4. 결제", "현재는 실제 결제 연동 전 단계의 화면입니다."],
+                [
+                  "4. 결제",
+                  "현재는 실제 결제 연동 전 단계의 화면입니다.",
+                ],
                 [
                   "5. 상세 결과",
                   "결제 연동 후 개인별 상세 분석을 제공하도록 확장합니다.",
@@ -1483,7 +1541,10 @@ export default function Home() {
                   className="rounded-2xl border border-white/[0.06] bg-white/[0.035] p-5"
                 >
                   <h3 className="font-semibold text-[#f0d18a]">{t}</h3>
-                  <p className="mt-2 text-sm leading-6 text-white/45">{d}</p>
+
+                  <p className="mt-2 text-sm leading-6 text-white/45">
+                    {d}
+                  </p>
                 </div>
               ))}
             </div>
@@ -1564,7 +1625,10 @@ export default function Home() {
             </p>
 
             <div className="mt-6 rounded-2xl border border-white/[0.06] bg-[#0a1019] p-4">
-              <p className="text-xs text-white/35">잠시만 기다려주세요</p>
+              <p className="text-xs text-white/35">
+                잠시만 기다려주세요
+              </p>
+
               <p className="mt-2 text-sm font-semibold text-[#f0d18a]">
                 결제 결과를 안전하게 처리하는 중입니다.
               </p>
@@ -1603,7 +1667,10 @@ export default function Home() {
             <div className="rounded-[28px] border border-[#d8b46a]/25 bg-white/[0.035] p-6 sm:p-8">
               <div className="flex items-center justify-between border-b border-white/[0.07] pb-5">
                 <div>
-                  <p className="text-xs text-white/35">상품</p>
+                  <p className="text-xs text-white/35">
+                    상품
+                  </p>
+
                   <h3 className="mt-1 text-xl font-semibold text-white">
                     프리미엄 사주 상세 분석
                   </h3>
@@ -1624,7 +1691,9 @@ export default function Home() {
                   "오행 상세 분석",
                 ].map((item) => (
                   <div key={item} className="text-sm text-white/60">
-                    <span className="mr-3 text-[#e7c982]">✓</span>
+                    <span className="mr-3 text-[#e7c982]">
+                      ✓
+                    </span>
                     {item}
                   </div>
                 ))}
@@ -1637,7 +1706,10 @@ export default function Home() {
                   className="mt-1 accent-[#d8b46a]"
                   defaultChecked
                 />
-                <span>상품 내용 및 이용 안내를 확인했습니다.</span>
+
+                <span>
+                  상품 내용 및 이용 안내를 확인했습니다.
+                </span>
               </label>
 
               {paymentError && (
@@ -1688,7 +1760,10 @@ export default function Home() {
 
                       const config = await configResponse.json();
 
-                      if (!configResponse.ok || !config.clientKey) {
+                      if (
+                        !configResponse.ok ||
+                        !config.clientKey
+                      ) {
                         throw new Error(
                           config.error ||
                             "토스 결제 설정을 불러오지 못했습니다."
@@ -1704,16 +1779,19 @@ export default function Home() {
                           config.clientKey
                         );
 
-                      const customerKey = `saju-${crypto.randomUUID()}`;
+                      const customerKey =
+                        `saju-${crypto.randomUUID()}`;
 
-                      const payment = tossPayments.payment({
-                        customerKey,
-                      });
+                      const payment =
+                        tossPayments.payment({
+                          customerKey,
+                        });
 
-                      const orderId = `SAJU-${Date.now()}-${Math.random()
-                        .toString(36)
-                        .slice(2, 8)
-                        .toUpperCase()}`;
+                      const orderId =
+                        `SAJU-${Date.now()}-${Math.random()
+                          .toString(36)
+                          .slice(2, 8)
+                          .toUpperCase()}`;
 
                       const pendingOrder = {
                         orderId,
@@ -1731,98 +1809,79 @@ export default function Home() {
                         JSON.stringify(pendingOrder)
                       );
 
-                      savePendingPayment(pendingOrder);
+                      savePendingPayment(
+                        pendingOrder
+                      );
+
                       setStep("payment-processing");
 
-                      const isDesktop = window.innerWidth >= 768;
+                      const isDesktop =
+                        window.innerWidth >= 768;
 
                       if (isDesktop) {
-                      const paymentResult =
-  (await payment.requestPayment({
-    method: "CARD",
-    amount: {
-      currency: "KRW",
-      value: 9900,
-    },
-    orderId,
-    orderName: "프리미엄 사주 상세 분석",
-    windowTarget: "iframe",
-  })) as unknown as {
-    paymentKey?: unknown;
-    orderId?: unknown;
-    amount?: unknown;
-  };
-
-const paymentResult =
-  (await payment.requestPayment({
-    method: "CARD",
-    amount: {
-      currency: "KRW",
-      value: 9900,
-    },
-    orderId,
-    orderName: "프리미엄 사주 상세 분석",
-    windowTarget: "iframe",
-  })) as unknown as {
-    paymentKey?: string;
-    orderId?: string;
-    amount?: number;
-    paymentType?: string;
-  };
-
-console.log("Toss payment result:", paymentResult);
-
-const paymentKey =
-  typeof paymentResult?.paymentKey === "string"
-    ? paymentResult.paymentKey.trim()
-    : "";
-
-const resultOrderId =
-  typeof paymentResult?.orderId === "string"
-    ? paymentResult.orderId.trim()
-    : "";
-
-const resultAmount = Number(paymentResult?.amount);
-
-if (!paymentKey) {
-  throw new Error(
-    "토스 결제 결과에서 paymentKey를 받지 못했습니다."
-  );
-}
-
-if (!resultOrderId) {
-  throw new Error(
-    "토스 결제 결과에서 orderId를 받지 못했습니다."
-  );
-}
-
-if (resultOrderId !== orderId) {
-  throw new Error(
-    "결제 주문번호가 일치하지 않습니다."
-  );
-}
-
-if (!Number.isFinite(resultAmount) || resultAmount !== 9900) {
-  throw new Error(
-    "결제 금액이 올바르지 않습니다."
-  );
-}
-                        const confirmResponse = await fetch(
-                          "/api/payment/confirm",
-                          {
-                            method: "POST",
-                            headers: {
-                              "Content-Type": "application/json",
+                        const paymentResult =
+                          (await payment.requestPayment({
+                            method: "CARD",
+                            amount: {
+                              currency: "KRW",
+                              value: 9900,
                             },
-                            body: JSON.stringify({
-                              paymentKey,
-                              orderId,
-                              amount: resultAmount,
-                            }),
-                          }
-                        );
+                            orderId,
+                            orderName:
+                              "프리미엄 사주 상세 분석",
+                            windowTarget: "iframe",
+                          })) as unknown as {
+                            paymentKey?: string;
+                            orderId?: string;
+                            amount?: number;
+                            paymentType?: string;
+                          };
 
-                        const confirmData = await confirmResponse.json();
+                        const paymentKey =
+                          typeof paymentResult?.paymentKey ===
+                          "string"
+                            ? paymentResult.paymentKey
+                            : "";
+
+                        const resultOrderId =
+                          typeof paymentResult?.orderId ===
+                          "string"
+                            ? paymentResult.orderId
+                            : "";
+
+                        const resultAmount =
+                          Number(paymentResult?.amount);
+
+                        if (
+                          !paymentKey ||
+                          resultOrderId !== orderId ||
+                          resultAmount !== 9900
+                        ) {
+                          throw new Error(
+                            "결제 결과 정보가 올바르지 않습니다."
+                          );
+                        }
+
+                        const confirmResponse =
+                          await fetch(
+                            "/api/payment/confirm",
+                            {
+                              method: "POST",
+                              headers: {
+                                "Content-Type":
+                                  "application/json",
+                              },
+                              body: JSON.stringify({
+                                paymentKey,
+                                orderId,
+                                amount:
+                                  resultAmount,
+                              }),
+                            }
+                          );
+
+                        const confirmData =
+                          await confirmResponse.json();
 
                         if (!confirmResponse.ok) {
                           throw new Error(
@@ -1836,22 +1895,27 @@ if (!Number.isFinite(resultAmount) || resultAmount !== 9900) {
                           paymentKey,
                         });
 
-                        const premiumResponse = await fetch(
-                          "/api/premium-saju",
-                          {
-                            method: "POST",
-                            headers: {
-                              "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({
-                              birthDate: pendingOrder.birthDate,
-                              birthTime: pendingOrder.birthTime,
-                              gender: pendingOrder.gender,
-                              paymentKey,
-                              orderId,
-                            }),
-                          }
-                        );
+                        const premiumResponse =
+                          await fetch(
+                            "/api/premium-saju",
+                            {
+                              method: "POST",
+                              headers: {
+                                "Content-Type":
+                                  "application/json",
+                              },
+                              body: JSON.stringify({
+                                birthDate:
+                                  pendingOrder.birthDate,
+                                birthTime:
+                                  pendingOrder.birthTime,
+                                gender:
+                                  pendingOrder.gender,
+                                paymentKey,
+                                orderId,
+                              }),
+                            }
+                          );
 
                         const premiumData =
                           await premiumResponse.json();
@@ -1866,38 +1930,51 @@ if (!Number.isFinite(resultAmount) || resultAmount !== 9900) {
                         const finalPremiumAnalysis =
                           premiumData.result || "";
 
-                        if (!finalPremiumAnalysis.trim()) {
+                        if (
+                          !finalPremiumAnalysis.trim()
+                        ) {
                           throw new Error(
                             "상세 사주 분석 결과가 비어 있습니다. 다시 시도해주세요."
                           );
                         }
 
-                        setPremiumAnalysis(finalPremiumAnalysis);
+                        setPremiumAnalysis(
+                          finalPremiumAnalysis
+                        );
+
                         setPaid(true);
                         setPaymentVerified(true);
                         setStep("result");
 
                         savePremiumResult({
-                          birthDate: pendingOrder.birthDate,
-                          birthTime: pendingOrder.birthTime,
-                          gender: pendingOrder.gender,
-                          analysis: pendingOrder.analysis || "",
+                          birthDate:
+                            pendingOrder.birthDate,
+                          birthTime:
+                            pendingOrder.birthTime,
+                          gender:
+                            pendingOrder.gender,
+                          analysis:
+                            pendingOrder.analysis ||
+                            "",
                           fourPillars:
-                            pendingOrder.fourPillars || {
+                            pendingOrder.fourPillars ||
+                            {
                               year: "",
                               month: "",
                               day: "",
                               time: "",
                             },
                           fiveElements:
-                            pendingOrder.fiveElements || {
+                            pendingOrder.fiveElements ||
+                            {
                               wood: 0,
                               fire: 0,
                               earth: 0,
                               metal: 0,
                               water: 0,
                             },
-                          premiumAnalysis: finalPremiumAnalysis,
+                          premiumAnalysis:
+                            finalPremiumAnalysis,
                           paid: true,
                         });
 
@@ -1906,6 +1983,7 @@ if (!Number.isFinite(resultAmount) || resultAmount !== 9900) {
                         );
 
                         clearPendingPayment();
+
                         setPaymentLoading(false);
                       } else {
                         await payment.requestPayment({
@@ -1915,9 +1993,12 @@ if (!Number.isFinite(resultAmount) || resultAmount !== 9900) {
                             value: 9900,
                           },
                           orderId,
-                          orderName: "프리미엄 사주 상세 분석",
-                          successUrl: `${window.location.origin}/?payment=success`,
-                          failUrl: `${window.location.origin}/?payment=fail`,
+                          orderName:
+                            "프리미엄 사주 상세 분석",
+                          successUrl:
+                            `${window.location.origin}/?payment=success`,
+                          failUrl:
+                            `${window.location.origin}/?payment=fail`,
                           windowTarget: "self",
                         });
                       }
@@ -1970,7 +2051,9 @@ if (!Number.isFinite(resultAmount) || resultAmount !== 9900) {
                 <button
                   key={key}
                   onClick={() =>
-                    setLegalPage(key as typeof legalPage)
+                    setLegalPage(
+                      key as typeof legalPage
+                    )
                   }
                   className={`rounded-full border px-4 py-2 text-xs ${
                     legalPage === key
@@ -1992,21 +2075,27 @@ if (!Number.isFinite(resultAmount) || resultAmount !== 9900) {
 
                   <div className="mt-6 space-y-5 text-sm leading-7 text-white/50">
                     <p>
-                      <b className="text-[#e7c982]">제1조 목적</b>
+                      <b className="text-[#e7c982]">
+                        제1조 목적
+                      </b>
                       <br />
                       본 약관은 AI 사주 서비스의 이용과 관련한 기본적인 사항을
                       정하는 것을 목적으로 합니다.
                     </p>
 
                     <p>
-                      <b className="text-[#e7c982]">제2조 서비스의 성격</b>
+                      <b className="text-[#e7c982]">
+                        제2조 서비스의 성격
+                      </b>
                       <br />
                       본 서비스는 사주 해석을 참고한 AI 콘텐츠를 제공합니다.
                       결과는 오락 및 참고 목적이며 특정 미래를 보장하지 않습니다.
                     </p>
 
                     <p>
-                      <b className="text-[#e7c982]">제3조 유료 서비스</b>
+                      <b className="text-[#e7c982]">
+                        제3조 유료 서비스
+                      </b>
                       <br />
                       유료 서비스의 상품 내용과 결제 조건은 결제 화면에 표시하며
                       실제 운영 시 관련 법령과 결제대행사 정책을 반영합니다.
@@ -2023,21 +2112,27 @@ if (!Number.isFinite(resultAmount) || resultAmount !== 9900) {
 
                   <div className="mt-6 space-y-5 text-sm leading-7 text-white/50">
                     <p>
-                      <b className="text-[#e7c982]">수집 항목</b>
+                      <b className="text-[#e7c982]">
+                        수집 항목
+                      </b>
                       <br />
                       서비스 제공에 필요한 입력 정보와 문의·결제 과정에서 필요한
                       정보를 구분하여 관리합니다.
                     </p>
 
                     <p>
-                      <b className="text-[#e7c982]">이용 목적</b>
+                      <b className="text-[#e7c982]">
+                        이용 목적
+                      </b>
                       <br />
                       사주 분석 제공, 서비스 운영, 문의 응대 및 결제 처리를 위한
                       목적으로 사용합니다.
                     </p>
 
                     <p>
-                      <b className="text-[#e7c982]">보관 및 파기</b>
+                      <b className="text-[#e7c982]">
+                        보관 및 파기
+                      </b>
                       <br />
                       실제 운영 시 항목별 보관 기간과 파기 절차를 법령 및 서비스
                       정책에 맞게 확정합니다.
@@ -2054,14 +2149,18 @@ if (!Number.isFinite(resultAmount) || resultAmount !== 9900) {
 
                   <div className="mt-6 space-y-5 text-sm leading-7 text-white/50">
                     <p>
-                      <b className="text-[#e7c982]">결제 전</b>
+                      <b className="text-[#e7c982]">
+                        결제 전
+                      </b>
                       <br />
                       상품 내용과 가격을 확인한 후 결제를 진행할 수 있도록
                       안내합니다.
                     </p>
 
                     <p>
-                      <b className="text-[#e7c982]">결제 후</b>
+                      <b className="text-[#e7c982]">
+                        결제 후
+                      </b>
                       <br />
                       디지털 콘텐츠의 제공 여부와 이용 상태를 기준으로 실제 운영
                       정책을 정하고 결제 화면에 명확히 표시합니다.
