@@ -63,6 +63,7 @@ export default function Home() {
   const birthTimeInputRef = useRef<HTMLInputElement>(null);
   const paymentInstanceRef = useRef<any>(null);
   const paymentActiveRef = useRef(false);
+  const paymentFlowRef = useRef(false);
 
   const openBirthDatePicker = () => {
     const input = birthDateInputRef.current as
@@ -128,6 +129,14 @@ export default function Home() {
 
       if (!response.ok) {
         throw new Error(data.error || "AI 분석에 실패했습니다.");
+      }
+
+      if (typeof data.result !== "string" || !data.result.trim()) {
+        throw new Error("AI 사주 분석 결과가 비어 있습니다.");
+      }
+
+      if (!data.fourPillars || !data.fiveElements) {
+        throw new Error("사주 분석 데이터가 올바르지 않습니다.");
       }
 
       setAnalysis(data.result);
@@ -257,6 +266,8 @@ export default function Home() {
     setPaymentError("");
     setPaymentVerified(false);
     setHasPendingPaymentKey(false);
+    paymentActiveRef.current = false;
+    paymentFlowRef.current = false;
     setFourPillars({
       year: "",
       month: "",
@@ -409,6 +420,7 @@ export default function Home() {
 
   const destroyActivePayment = async () => {
     paymentActiveRef.current = false;
+    paymentFlowRef.current = false;
     try {
       await paymentInstanceRef.current?.destroy?.();
     } catch (error) {
@@ -668,6 +680,7 @@ export default function Home() {
       }
 
       if (step === "payment-processing") {
+        paymentFlowRef.current = false;
         setPaymentLoading(false);
         setPremiumLoading(false);
         setStep("checkout");
@@ -675,6 +688,7 @@ export default function Home() {
       }
 
       if (paid && premiumAnalysis.trim()) {
+        paymentFlowRef.current = false;
         setStep("home");
       }
     };
@@ -1516,11 +1530,18 @@ export default function Home() {
               <button
                 disabled={paymentLoading}
                 onClick={async () => {
+                  if (paymentFlowRef.current || paymentLoading) {
+                    return;
+                  }
+
+                  paymentFlowRef.current = true;
+
                   const agreement = document.getElementById(
                     "payment-agreement"
                   ) as HTMLInputElement | null;
 
                   if (!agreement?.checked) {
+                    paymentFlowRef.current = false;
                     setPaymentError("상품 내용 및 이용 안내를 확인해주세요.");
                     return;
                   }
@@ -1750,7 +1771,10 @@ export default function Home() {
                       setPaymentLoading(false);
                       window.history.replaceState({}, "", window.location.pathname);
                     }
+
+                    paymentFlowRef.current = false;
                   } catch (error) {
+                    paymentFlowRef.current = false;
                     console.error(error);
                     void destroyActivePayment();
                     setPaymentError(getPaymentErrorMessage(error));
