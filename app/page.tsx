@@ -5,6 +5,21 @@ import { useEffect, useRef, useState } from "react";
 const PREMIUM_RESULT_STORAGE_KEY = "ai_saju_premium_result_v1";
 const PENDING_PAYMENT_STORAGE_KEY = "ai_saju_pending_payment_v1";
 const INITIALIZING_MESSAGE = "AI 사주 결과를 준비하고 있습니다...";
+const CONFIRMED_PAYMENT_STORAGE_KEY = "ai_saju_confirmed_payment_v1";
+
+async function readJsonResponse(response: Response) {
+  const text = await response.text();
+
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("서버 응답을 읽지 못했습니다. 잠시 후 다시 시도해주세요.");
+  }
+}
 
 export default function Home() {
   const [step, setStep] = useState<"home" | "input" | "result" | "service" | "guide" | "support" | "checkout" | "payment-processing" | "legal">("home");
@@ -32,6 +47,7 @@ export default function Home() {
   const [premiumLoading, setPremiumLoading] = useState(false);
   const [premiumAnalysis, setPremiumAnalysis] = useState("");
   const [paymentError, setPaymentError] = useState("");
+  const [confirmedPayment, setConfirmedPayment] = useState<{ paymentKey: string; orderId: string; amount: number } | null>(null);
   const [legalPage, setLegalPage] = useState<"terms" | "privacy" | "refund" | "business">("terms");
 
   const [birthDate, setBirthDate] = useState("");
@@ -185,6 +201,12 @@ export default function Home() {
     setAnalysis("");
     setPremiumAnalysis("");
     setPaymentError("");
+    setConfirmedPayment(null);
+    try {
+      localStorage.removeItem(CONFIRMED_PAYMENT_STORAGE_KEY);
+    } catch {
+      // ignore storage cleanup errors
+    }
     setFourPillars({
       year: "",
       month: "",
@@ -211,6 +233,74 @@ export default function Home() {
   const hasElementData = elements.some((element) => element.value > 0);
   const mostElement = [...elements].sort((a, b) => b.value - a.value)[0];
   const leastElement = [...elements].sort((a, b) => a.value - b.value)[0];
+
+  const retryPremiumAnalysis = async () => {
+    if (!confirmedPayment) {
+      setPaymentError("확인된 결제 정보를 찾지 못했습니다. 결제 상태를 다시 확인해주세요.");
+      return;
+    }
+
+    const saved = sessionStorage.getItem("saju_payment_order") || localStorage.getItem(PENDING_PAYMENT_STORAGE_KEY);
+    const order = saved ? JSON.parse(saved) : null;
+
+    if (!order || order.orderId !== confirmedPayment.orderId) {
+      setPaymentError("주문 정보가 만료되었습니다. 고객센터에 문의해주세요.");
+      return;
+    }
+
+    setPaymentError("");
+    setPremiumLoading(true);
+    setStep("payment-processing");
+
+    try {
+      const response = await fetch("/api/premium-saju", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          birthDate: order.birthDate,
+          birthTime: order.birthTime,
+          gender: order.gender,
+          paymentKey: confirmedPayment.paymentKey,
+          orderId: confirmedPayment.orderId,
+        }),
+      });
+
+      const data = await readJsonResponse(response);
+
+      if (!response.ok || !data?.result) {
+        throw new Error(data.error || "상세 사주 분석 생성에 실패했습니다. 다시 시도해주세요.");
+      }
+
+      const finalPremiumAnalysis = data.result;
+      setPremiumAnalysis(finalPremiumAnalysis);
+      setPaid(true);
+      setStep("result");
+
+      savePremiumResult({
+        birthDate: order.birthDate,
+        birthTime: order.birthTime,
+        gender: order.gender,
+        analysis: order.analysis || "",
+        fourPillars: order.fourPillars || { year: "", month: "", day: "", time: "" },
+        fiveElements: order.fiveElements || { wood: 0, fire: 0, earth: 0, metal: 0, water: 0 },
+        premiumAnalysis: finalPremiumAnalysis,
+        paid: true,
+      });
+
+      sessionStorage.removeItem("saju_payment_order");
+      clearPendingPayment();
+      localStorage.removeItem(CONFIRMED_PAYMENT_STORAGE_KEY);
+      setConfirmedPayment(null);
+      window.history.replaceState({}, "", window.location.pathname);
+    } catch (error) {
+      console.error(error);
+      setPaymentError(error instanceof Error ? error.message : "상세 사주 분석 생성 중 오류가 발생했습니다.");
+      setStep("checkout");
+    } finally {
+      setPremiumLoading(false);
+      setPaymentLoading(false);
+    }
+  };
 
   useEffect(() => {
     let restoredPremium = false;
@@ -249,6 +339,26 @@ export default function Home() {
 
     const params = new URLSearchParams(window.location.search);
     const paymentStatus = params.get("payment");
+
+    try {
+      const savedConfirmed = localStorage.getItem(CONFIRMED_PAYMENT_STORAGE_KEY);
+      if (savedConfirmed) {
+        const parsed = JSON.parse(savedConfirmed);
+        if (
+          parsed?.paymentKey &&
+          parsed?.orderId &&
+          Number(parsed?.amount) === 9900
+        ) {
+          setConfirmedPayment({
+            paymentKey: parsed.paymentKey,
+            orderId: parsed.orderId,
+            amount: 9900,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("confirmed payment restore error", error);
+    }
 
     // 결제 리다이렉트 직후 홈 화면이 잠깐 보이는 문제를 막고,
     // 새로고침으로 React state가 초기화되어도 진행 중인 주문 정보를 복구합니다.
@@ -360,12 +470,23 @@ export default function Home() {
           }),
         });
 
-        const confirmData = await confirmResponse.json();
+        const confirmData = await readJsonResponse(confirmResponse);
 
-        if (!confirmResponse.ok) {
+        if (!confirmResponse.ok || confirmData?.success !== true) {
           throw new Error(
             confirmData.error || "결제 승인에 실패했습니다."
           );
+        }
+
+        const confirmed = { paymentKey, orderId, amount };
+        setConfirmedPayment(confirmed);
+        try {
+          localStorage.setItem(
+            CONFIRMED_PAYMENT_STORAGE_KEY,
+            JSON.stringify({ ...confirmed, confirmedAt: Date.now() })
+          );
+        } catch (storageError) {
+          console.error("confirmed payment save error", storageError);
         }
 
         const premiumResponse = await fetch("/api/premium-saju", {
@@ -382,11 +503,11 @@ export default function Home() {
           }),
         });
 
-        const premiumData = await premiumResponse.json();
+        const premiumData = await readJsonResponse(premiumResponse);
 
-        if (!premiumResponse.ok) {
+        if (!premiumResponse.ok || !premiumData?.result) {
           throw new Error(
-            premiumData.error || "상세 사주 분석 생성에 실패했습니다."
+            premiumData.error || "결제는 확인되었지만 상세 사주 분석 생성에 실패했습니다. 아래 버튼으로 다시 생성해주세요."
           );
         }
 
@@ -409,6 +530,12 @@ export default function Home() {
 
         sessionStorage.removeItem("saju_payment_order");
         clearPendingPayment();
+        try {
+          localStorage.removeItem(CONFIRMED_PAYMENT_STORAGE_KEY);
+        } catch (storageError) {
+          console.error("confirmed payment clear error", storageError);
+        }
+        setConfirmedPayment(null);
         window.history.replaceState({}, "", window.location.pathname);
       } catch (error) {
         console.error(error);
@@ -1213,6 +1340,22 @@ export default function Home() {
                 </div>
               )}
 
+              {confirmedPayment && (
+                <div className="mt-4 rounded-2xl border border-[#d8b46a]/25 bg-[#d8b46a]/[0.06] p-4">
+                  <p className="text-sm font-semibold text-[#f0d18a]">결제는 정상적으로 확인되었습니다.</p>
+                  <p className="mt-1 text-xs leading-5 text-white/45">추가 결제 없이 상세 사주 분석만 다시 생성할 수 있습니다.</p>
+                  <button
+                    type="button"
+                    onClick={retryPremiumAnalysis}
+                    disabled={premiumLoading}
+                    className="mt-3 w-full rounded-xl border border-[#d8b46a]/40 bg-[#d8b46a]/10 px-4 py-3 text-sm font-semibold text-[#f0d18a] disabled:opacity-50"
+                  >
+                    {premiumLoading ? "상세 분석을 다시 생성하고 있습니다..." : "추가 결제 없이 상세 분석 다시 생성"}
+                  </button>
+                </div>
+              )}
+
+              {!confirmedPayment && (
               <button
                 disabled={paymentLoading}
                 onClick={async () => {
@@ -1230,7 +1373,7 @@ export default function Home() {
 
                   try {
                     const configResponse = await fetch("/api/payment/config");
-                    const config = await configResponse.json();
+                    const config = await readJsonResponse(configResponse);
 
                     if (!configResponse.ok || !config.clientKey) {
                       throw new Error(
@@ -1304,6 +1447,7 @@ export default function Home() {
                   ? "결제창을 준비하고 있습니다..."
                   : "토스 테스트 결제하기"}
               </button>
+              )}
 
               <p className="mt-4 text-center text-[10px] leading-5 text-white/25">
                 테스트 키를 사용한 결제입니다. 실제 청구가 발생하지 않습니다.
