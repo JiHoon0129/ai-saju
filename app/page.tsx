@@ -974,9 +974,9 @@ export default function Home() {
 
       {/* ==================== RESULT ==================== */}
       {step === "result" && (
-        <section className="min-h-screen bg-[#070b13] px-4 py-8 sm:px-6 sm:py-12">
+        <section className="min-h-screen bg-[#070b13] px-3 py-6 sm:px-6 sm:py-12">
           <div className="mx-auto max-w-4xl">
-            <div className="mb-9 text-center">
+            <div className="mb-7 text-center sm:mb-9">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[#d8b46a]/45 bg-[#d8b46a]/[0.07] text-2xl text-[#e7c982] shadow-[0_0_30px_rgba(216,180,106,0.08)]">
                 ✦
               </div>
@@ -1015,7 +1015,7 @@ export default function Home() {
                   {paid ? "PREMIUM SAJU" : "MY SAJU"}
                 </span>
               </div>
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
                 {[
                   ["생년월일", birthDate],
                   ["태어난 시간", birthTime],
@@ -1023,7 +1023,7 @@ export default function Home() {
                 ].map(([label, value]) => (
                   <div
                     key={label}
-                    className="rounded-2xl border border-white/[0.06] bg-white/[0.035] p-3 text-center sm:p-4"
+                    className="rounded-2xl border border-white/[0.06] bg-white/[0.035] p-3.5 text-center sm:p-4"
                   >
                     <p className="text-[10px] text-white/35 sm:text-xs">{label}</p>
                     <p className="mt-1 text-xs font-semibold text-white sm:text-sm">
@@ -1041,7 +1041,7 @@ export default function Home() {
                   FOUR PILLARS
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
                 {[
                   ["년주", fourPillars.year],
                   ["월주", fourPillars.month],
@@ -1050,7 +1050,7 @@ export default function Home() {
                 ].map(([label, value]) => (
                   <div
                     key={label}
-                    className="rounded-2xl border border-[#d8b46a]/15 bg-[#0b111b] p-5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                    className="rounded-2xl border border-[#d8b46a]/15 bg-[#0b111b] p-4 text-center sm:p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
                   >
                     <div className="text-xs text-white/35">{label}</div>
                     <div className="mt-2 text-xl font-bold text-[#f0d18a] sm:text-2xl">
@@ -1108,7 +1108,7 @@ export default function Home() {
                 전통 명리학의 오행 강약을 확정적으로 판단하는 기준은 아닙니다.
               </p>
 
-              <div className="mb-5 grid grid-cols-2 gap-3">
+              <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-[#d8b46a]/15 bg-[#d8b46a]/[0.06] p-4">
                   <p className="text-xs text-white/40">가장 많은 오행</p>
                   <p className="mt-1 text-lg font-bold text-[#f0d18a]">
@@ -1180,7 +1180,7 @@ export default function Home() {
                     return (
                       <div
                         key={index}
-                        className="rounded-2xl border border-white/[0.06] bg-[#0a1019] p-5 sm:p-6"
+                        className="rounded-2xl border border-white/[0.06] bg-[#0a1019] p-4 sm:p-6"
                       >
                         <h3 className="mb-3 text-lg font-bold text-[#f0d18a]">
                           {title}
@@ -1282,7 +1282,7 @@ export default function Home() {
                         return (
                           <div
                             key={index}
-                            className="rounded-2xl border border-white/[0.06] bg-[#0a1019] p-5"
+                            className="rounded-2xl border border-white/[0.06] bg-[#0a1019] p-4 sm:p-5"
                           >
                             <h4 className="text-base font-bold text-[#f0d18a]">
                               {title}
@@ -1295,7 +1295,7 @@ export default function Home() {
                       })}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-white/[0.06] bg-[#0a1019] p-5">
+                  <div className="rounded-2xl border border-white/[0.06] bg-[#0a1019] p-4 sm:p-5">
                     <p className="text-sm leading-7 text-white/60">
                       결제는 완료되었지만 상세 분석 결과를 아직 불러오지 못했습니다.
                     </p>
@@ -1308,17 +1308,17 @@ export default function Home() {
               AI 사주는 전통 사주 해석을 참고한 콘텐츠로, 중요한 의사결정의 유일한 근거로 사용하지 마세요.
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-2.5 sm:grid-cols-2">
               <button
                 onClick={copyAnalysis}
-                className="rounded-2xl border border-white/10 bg-white/[0.035] px-6 py-4 font-bold text-white/75 transition hover:border-[#d8b46a]/30 hover:bg-white/[0.06]"
+                className="rounded-2xl border border-white/10 bg-white/[0.035] px-5 py-4 font-bold sm:px-6 text-white/75 transition hover:border-[#d8b46a]/30 hover:bg-white/[0.06]"
               >
                 📋 분석 결과 복사하기
               </button>
 
               <button
                 onClick={resetInput}
-                className="rounded-2xl border border-[#d8b46a]/40 bg-[#d8b46a]/10 px-6 py-4 font-bold text-[#e7c982] transition hover:bg-[#d8b46a]/15"
+                className="rounded-2xl border border-[#d8b46a]/40 bg-[#d8b46a]/10 px-5 py-4 font-bold sm:px-6 text-[#e7c982] transition hover:bg-[#d8b46a]/15"
               >
                 다시 입력하기
               </button>
