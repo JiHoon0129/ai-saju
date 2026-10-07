@@ -34,13 +34,13 @@ export async function POST(request: Request) {
     const secretKey = process.env.TOSS_SECRET_KEY;
 
     if (!secretKey) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "TOSS_SECRET_KEY가 설정되지 않았습니다.",
-        },
-        { status: 500 }
-      );
+     return NextResponse.json(
+  {
+    success: false,
+    error: "결제 승인 처리 중 오류가 발생했습니다.",
+  },
+  { status: 500 }
+);
     }
 
     const body = await request.json().catch(() => null);
