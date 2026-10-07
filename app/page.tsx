@@ -1371,32 +1371,83 @@ export default function Home() {
         </section>
       )}
 
-      {step === "guide" && (
-        <section className="min-h-screen bg-[#070b13] px-5 py-10 sm:px-6 sm:py-14">
-          <div className="mx-auto max-w-3xl">
-            <button onClick={() => setStep("home")} className="mb-8 text-sm text-white/45 hover:text-[#e7c982]">← 홈으로</button>
-            <div className="mb-10 text-center">
-              <p className="text-xs font-semibold tracking-[0.22em] text-[#d8b46a]">GUIDE</p>
-              <h2 className="mt-3 text-3xl font-semibold text-white">이용안내</h2>
-            </div>
-            <div className="space-y-3">
-              {[
-                ["1. 정보 입력","생년월일, 태어난 시간, 성별을 입력합니다."],
-                ["2. 무료 분석","사주 원국과 오행, 기본 AI 분석을 확인합니다."],
-                ["3. 상세 분석","프리미엄 상세 분석이 필요한 경우 결제 화면으로 이동합니다."],
-                ["4. 결제","현재는 실제 결제 연동 전 단계의 화면입니다."],
-                ["5. 상세 결과","결제 연동 후 개인별 상세 분석을 제공하도록 확장합니다."]
-              ].map(([t,d]) => (
-                <div key={t} className="rounded-2xl border border-white/[0.06] bg-white/[0.035] p-5">
-                  <h3 className="font-semibold text-[#f0d18a]">{t}</h3>
-                  <p className="mt-2 text-sm leading-6 text-white/45">{d}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+     {step === "guide" && (
+  <section className="min-h-screen bg-[#070b13] px-5 py-10 sm:px-6 sm:py-14">
+    <div className="mx-auto max-w-3xl">
+      <button
+        onClick={() => setStep("home")}
+        className="mb-8 text-sm text-white/45 hover:text-[#e7c982]"
+      >
+        ← 홈으로
+      </button>
 
+      <div className="mb-10 text-center">
+        <p className="text-xs font-semibold tracking-[0.22em] text-[#d8b46a]">
+          GUIDE
+        </p>
+
+        <h2 className="mt-3 text-3xl font-semibold text-white">
+          이용안내
+        </h2>
+
+        <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-white/45">
+          간단한 정보 입력부터 무료 사주 분석, 프리미엄 상세 분석까지
+          순서대로 이용할 수 있습니다.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {[
+          [
+            "1. 정보 입력",
+            "생년월일, 태어난 시간, 성별을 입력합니다."
+          ],
+          [
+            "2. 무료 분석",
+            "사주 원국과 오행, 기본 AI 분석 결과를 확인합니다."
+          ],
+          [
+            "3. 상세 분석 선택",
+            "무료 결과를 확인한 후 원하는 경우 프리미엄 상세 분석을 선택합니다."
+          ],
+          [
+            "4. 테스트 결제",
+            "현재는 Toss 테스트 결제 환경으로 운영되며 9,900원 테스트 결제 흐름을 확인할 수 있습니다."
+          ],
+          [
+            "5. 프리미엄 결과",
+            "결제 승인 후 재물운, 직업운, 연애·대인관계, 시기별 흐름, 오행 상세 분석 등을 확인할 수 있습니다."
+          ],
+        ].map(([t, d]) => (
+          <div
+            key={t}
+            className="rounded-2xl border border-white/[0.06] bg-white/[0.035] p-5"
+          >
+            <h3 className="font-semibold text-[#f0d18a]">
+              {t}
+            </h3>
+
+            <p className="mt-2 text-sm leading-6 text-white/45">
+              {d}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-[#d8b46a]/15 bg-[#d8b46a]/[0.04] p-5">
+        <p className="text-xs font-semibold text-[#d8b46a]">
+          이용 시 참고해주세요
+        </p>
+
+        <p className="mt-2 text-sm leading-6 text-white/45">
+          AI 사주 결과는 전통적인 사주 해석을 참고한 콘텐츠이며,
+          미래를 확정적으로 예측하거나 중요한 의사결정을 대신하는 자료가 아닙니다.
+        </p>
+      </div>
+    </div>
+  </section>
+)}
+      
       {step === "support" && (
         <section className="min-h-screen bg-[#070b13] px-5 py-10 sm:px-6 sm:py-14">
           <div className="mx-auto max-w-2xl">
