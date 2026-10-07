@@ -23,9 +23,6 @@ export async function POST(request: Request) {
     // 태어난 시간 분리
     const [hour, minute] = birthTime.split(":").map(Number);
 
-   const [year, month, day] = birthDate.split("-").map(Number);
-const [hour, minute] = birthTime.split(":").map(Number);
-
 if (
   !Number.isInteger(year) ||
   !Number.isInteger(month) ||
