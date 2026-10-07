@@ -242,6 +242,7 @@ export default function Home() {
   const clearPendingPayment = () => {
     try {
       localStorage.removeItem(PENDING_PAYMENT_STORAGE_KEY);
+      sessionStorage.removeItem("saju_payment_order");
     } catch (error) {
       console.error("pending payment clear error", error);
     }
@@ -479,8 +480,13 @@ export default function Home() {
 
         if (pending) {
           setBirthDate(pending.birthDate || "");
-          const restoredPaymentKey = typeof pending.paymentKey === "string" && pending.paymentKey.trim().length > 0;
-          setPaymentVerified(pending.paymentVerified === true && restoredPaymentKey);
+          const restoredPaymentKey =
+            typeof pending.paymentKey === "string" &&
+            pending.paymentKey.trim().length > 0;
+          const restoredPaymentVerified =
+            pending.paymentVerified === true && restoredPaymentKey;
+
+          setPaymentVerified(restoredPaymentVerified);
           setHasPendingPaymentKey(restoredPaymentKey);
           setBirthTime(pending.birthTime || "");
           setGender(pending.gender || "");
@@ -497,6 +503,10 @@ export default function Home() {
               water: 0,
             }
           );
+
+          // 결제 진행/승인 확인 중 새로고침되어도 홈으로 돌아가지 않고
+          // 기존 주문 상태를 확인할 수 있는 결제 화면으로 복구합니다.
+          setStep("checkout");
         }
       } catch (error) {
         console.error("pending payment restore error", error);
