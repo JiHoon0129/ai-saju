@@ -1,6 +1,32 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
+const TOSS_PAYMENT_BY_KEY_URL =
+  "https://api.tosspayments.com/v1/payments";
+
+const EXPECTED_AMOUNT = 9900;
+
+function getAuthHeader(secretKey: string) {
+  return `Basic ${Buffer.from(`${secretKey}:`).toString("base64")}`;
+}
+
+async function readTossResponse(response: Response) {
+  const text = await response.text();
+
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {
+      code: "INVALID_TOSS_RESPONSE",
+      message: "토스 결제 서버의 응답을 읽지 못했습니다.",
+    };
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const {
@@ -25,6 +51,7 @@ export async function POST(request: Request) {
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
+    const tossSecretKey = process.env.TOSS_SECRET_KEY;
 
     if (!apiKey) {
       return NextResponse.json(
@@ -33,6 +60,90 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!tossSecretKey) {
+      return NextResponse.json(
+        { error: "TOSS_SECRET_KEY가 설정되지 않았습니다." },
+        { status: 500 }
+      );
+    }
+
+    /*
+     * 서버에서 실제 토스 결제 상태 확인
+     */
+    const paymentResponse = await fetch(
+      `${TOSS_PAYMENT_BY_KEY_URL}/${encodeURIComponent(paymentKey)}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: getAuthHeader(tossSecretKey),
+        },
+        cache: "no-store",
+      }
+    );
+
+    const paymentData = await readTossResponse(paymentResponse);
+
+    if (!paymentResponse.ok) {
+      console.error("Toss payment lookup failed:", paymentData);
+
+      return NextResponse.json(
+        {
+          error:
+            paymentData?.message ||
+            "결제 정보를 확인하지 못했습니다.",
+          code:
+            paymentData?.code ||
+            "PAYMENT_LOOKUP_FAILED",
+        },
+        {
+          status: paymentResponse.status || 400,
+        }
+      );
+    }
+
+    /*
+     * 결제 완료 상태 확인
+     */
+    if (paymentData?.status !== "DONE") {
+      return NextResponse.json(
+        {
+          error: "결제가 완료된 상태가 아닙니다.",
+          code: "PAYMENT_NOT_DONE",
+        },
+        { status: 400 }
+      );
+    }
+
+    /*
+     * 주문번호 검증
+     */
+    if (paymentData?.orderId !== orderId) {
+      return NextResponse.json(
+        {
+          error: "결제 주문번호가 일치하지 않습니다.",
+          code: "PAYMENT_ORDER_MISMATCH",
+        },
+        { status: 400 }
+      );
+    }
+
+    /*
+     * 결제 금액 검증
+     */
+    if (Number(paymentData?.totalAmount) !== EXPECTED_AMOUNT) {
+      return NextResponse.json(
+        {
+          error: "결제 금액이 일치하지 않습니다.",
+          code: "PAYMENT_AMOUNT_MISMATCH",
+        },
+        { status: 400 }
+      );
+    }
+
+    /*
+     * 결제 검증이 모두 통과된 경우에만
+     * 상세 사주 분석 실행
+     */
     const client = new OpenAI({
       apiKey,
     });
@@ -71,7 +182,9 @@ export async function POST(request: Request) {
     console.error("Premium saju error:", error);
 
     return NextResponse.json(
-      { error: "상세 AI 사주 분석 생성 중 오류가 발생했습니다." },
+      {
+        error: "상세 AI 사주 분석 생성 중 오류가 발생했습니다.",
+      },
       { status: 500 }
     );
   }
