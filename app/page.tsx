@@ -1190,7 +1190,7 @@ export default function Home() {
                     return (
                       <div
                         key={index}
-                        className="rounded-2xl border border-white/[0.06] bg-[#0a1019] p-4 sm:p-6"
+                        className="rounded-2xl border border-white/[0.06] bg-[#0a1019] p-5 sm:p-6"
                       >
                         <h3 className="mb-3 text-lg font-bold text-[#f0d18a]">
                           {title}
@@ -1257,16 +1257,16 @@ export default function Home() {
             {/* Premium result */}
             {paid && (
               <div className="mb-5 rounded-[26px] border border-[#d8b46a]/35 bg-gradient-to-b from-[#d8b46a]/[0.09] to-white/[0.025] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.2)] sm:p-6">
-                <div className="mb-6 flex items-center justify-between">
+               <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-xs font-semibold tracking-[0.2em] text-[#d8b46a]">
                       PREMIUM SAJU
                     </p>
-                    <h3 className="mt-2 text-2xl font-semibold text-white">
+                    <h3 className="mt-2 text-xl font-semibold text-white sm:text-2xl">
                       상세 사주 분석
                     </h3>
                   </div>
-                  <span className="rounded-full border border-[#d8b46a]/30 bg-[#d8b46a]/10 px-3 py-1 text-[10px] font-semibold text-[#e7c982]">
+                 <span className="w-fit rounded-full border border-[#d8b46a]/30 bg-[#d8b46a]/10 px-3 py-1 text-[10px] font-semibold text-[#e7c982]">
                     UNLOCKED
                   </span>
                 </div>
