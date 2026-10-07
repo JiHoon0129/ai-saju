@@ -23,13 +23,30 @@ export async function POST(request: Request) {
     // 태어난 시간 분리
     const [hour, minute] = birthTime.split(":").map(Number);
 
-    if (
-      !year ||
-      !month ||
-      !day ||
-      Number.isNaN(hour) ||
-      Number.isNaN(minute)
-    ) {
+   const [year, month, day] = birthDate.split("-").map(Number);
+const [hour, minute] = birthTime.split(":").map(Number);
+
+if (
+  !Number.isInteger(year) ||
+  !Number.isInteger(month) ||
+  !Number.isInteger(day) ||
+  !Number.isInteger(hour) ||
+  !Number.isInteger(minute) ||
+  month < 1 ||
+  month > 12 ||
+  day < 1 ||
+  day > 31 ||
+  hour < 0 ||
+  hour > 23 ||
+  minute < 0 ||
+  minute > 59 ||
+  !["남성", "여성"].includes(gender)
+) {
+  return NextResponse.json(
+    { error: "생년월일 또는 태어난 시간 형식이 올바르지 않습니다." },
+    { status: 400 }
+  );
+} {
       return NextResponse.json(
         { error: "생년월일 또는 태어난 시간 형식이 올바르지 않습니다." },
         { status: 400 }
