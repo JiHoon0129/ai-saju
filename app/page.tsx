@@ -1354,14 +1354,17 @@ export default function Home() {
                 ["02","오행 분석","목·화·토·금·수의 분포를 확인합니다."],
                 ["03","상세 분석","재물운·직업운·관계·흐름 등을 확장합니다."]
               ].map(([n,t,d]) => (
-                <div key={n} className="rounded-[24px] border border-[#d8b46a]/15 bg-white/[0.035] p-6">
+                <div
+  key={n}
+  className="rounded-[24px] border border-[#d8b46a]/15 bg-white/[0.035] p-5 sm:p-6"
+>
                   <p className="text-xs tracking-[0.2em] text-[#d8b46a]">{n}</p>
                   <h3 className="mt-3 text-lg font-semibold text-white">{t}</h3>
                   <p className="mt-3 text-sm leading-6 text-white/45">{d}</p>
                 </div>
               ))}
             </div>
-            <div className="mt-5 rounded-[26px] border border-[#d8b46a]/20 bg-white/[0.035] p-6">
+           <div className="mt-5 rounded-[26px] border border-[#d8b46a]/20 bg-white/[0.035] p-5 sm:p-6">
               <h3 className="text-lg font-semibold text-[#f0d18a]">이용 전 안내</h3>
               <p className="mt-3 text-sm leading-7 text-white/50">
                 AI 사주 결과는 전통적인 사주 해석을 참고한 콘텐츠이며 미래를 확정적으로 예측하는 자료가 아닙니다.
@@ -1457,9 +1460,16 @@ export default function Home() {
               <h2 className="mt-3 text-3xl font-semibold text-white">고객센터</h2>
               <p className="mt-3 text-sm leading-6 text-white/45">서비스 이용 중 궁금한 점이나 결제·결과 관련 문의를 남길 수 있습니다.</p>
               <div className="mt-7 space-y-4">
-                <input placeholder="문의 제목을 입력해주세요." className="w-full rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-4 text-white outline-none placeholder:text-white/25 focus:border-[#d8b46a]/70" />
-                <textarea rows={6} placeholder="문의 내용을 입력해주세요." className="w-full resize-none rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-4 text-white outline-none placeholder:text-white/25 focus:border-[#d8b46a]/70" />
-                <button onClick={() => alert("문의 기능은 실제 운영 단계에서 이메일 또는 고객센터 API와 연결합니다.")} className="w-full rounded-2xl bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-5 py-4 font-bold text-[#171107]">문의 접수하기</button>
+                <input
+  placeholder="문의 제목을 입력해주세요."
+  className="w-full min-h-[54px] touch-manipulation rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-4 text-base text-white outline-none placeholder:text-white/25 focus:border-[#d8b46a]/70"
+/>
+                <textarea
+  rows={6}
+  placeholder="문의 내용을 입력해주세요."
+  className="w-full resize-none rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-4 text-base leading-6 text-white outline-none placeholder:text-white/25 focus:border-[#d8b46a]/70"
+/>
+                <button onClick={() => alert("문의 기능은 실제 운영 단계에서 이메일 또는 고객센터 API와 연결합니다.")} className="min-h-[54px] w-full touch-manipulation rounded-2xl bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-5 py-4 font-bold text-[#171107]">문의 접수하기</button>
               </div>
             </div>
           </div>
@@ -1863,11 +1873,15 @@ export default function Home() {
         <section className="min-h-screen bg-[#070b13] px-5 py-10 sm:px-6 sm:py-14">
           <div className="mx-auto max-w-3xl">
             <button onClick={() => setStep("home")} className="mb-8 text-sm text-white/45 hover:text-[#e7c982]">← 홈으로</button>
-            <div className="mb-6 flex flex-wrap gap-2">
+            <div className="mb-6 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {[
                 ["terms","이용약관"],["privacy","개인정보처리방침"],["refund","환불정책"],["business","사업자 정보"]
               ].map(([key,label]) => (
-                <button key={key} onClick={() => setLegalPage(key as typeof legalPage)} className={`rounded-full border px-4 py-2 text-xs ${legalPage === key ? "border-[#d8b46a] bg-[#d8b46a]/10 text-[#f0d18a]" : "border-white/10 text-white/45"}`}>{label}</button>
+                <button key={key} onClick={() => setLegalPage(key as typeof legalPage)} className={`min-h-[44px] touch-manipulation rounded-full border px-3 py-2 text-xs font-medium sm:px-4 ${
+  legalPage === key
+    ? "border-[#d8b46a] bg-[#d8b46a]/10 text-[#f0d18a]"
+    : "border-white/10 text-white/45"
+}`}>{label}</button>
               ))}
             </div>
             <div className="rounded-[28px] border border-[#d8b46a]/20 bg-white/[0.035] p-6 sm:p-8">
