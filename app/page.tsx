@@ -983,8 +983,8 @@ export default function Home() {
       )}
 
       {/* ==================== RESULT ==================== */}
-      {step === "result" && (
-        <section className="min-h-screen bg-[#070b13] px-3 py-6 sm:px-6 sm:py-12">
+     {step === "result" && (
+  <section className="min-h-screen bg-[#070b13] px-4 py-6 sm:px-6 sm:py-12">
           <div className="mx-auto max-w-4xl">
             <div className="mb-7 text-center sm:mb-9">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-[#d8b46a]/45 bg-[#d8b46a]/[0.07] text-2xl text-[#e7c982] shadow-[0_0_30px_rgba(216,180,106,0.08)]">
