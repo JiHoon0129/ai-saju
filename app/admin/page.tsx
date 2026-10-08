@@ -999,7 +999,7 @@ function FourPillars({
       </h3>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {items.map(([label, item]) => (
+        {items.map(([label, item]: [string, string]) => (
           <div
             key={label}
             className="rounded-2xl border border-gray-200 bg-white p-5 text-center"
@@ -1041,7 +1041,7 @@ function FiveElements({
       </h3>
 
       <div className="grid grid-cols-5 gap-2">
-        {items.map(([label, item]) => (
+        {items.map(([label, item]: [string, string]) => (
           <div
             key={label}
             className="rounded-2xl border border-gray-200 bg-white p-4 text-center"
