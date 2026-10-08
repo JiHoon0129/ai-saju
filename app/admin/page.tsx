@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ADMIN_PRODUCTS, type AdminProductId } from "@/lib/admin-products";
+import {
+  ADMIN_PRODUCTS,
+  type AdminProductId,
+} from "@/lib/admin-products";
 
 type PersonData = {
   birthDate: string;
@@ -22,7 +25,7 @@ const EMPTY_PERSON: PersonData = {
 
 export default function AdminPage() {
   const [productId, setProductId] =
-    useState<AdminProductId>("free");
+    useState<AdminProductId | null>(null);
 
   const [customer, setCustomer] =
     useState<PersonData>(EMPTY_PERSON);
@@ -76,6 +79,7 @@ export default function AdminPage() {
 
     setCustomerSaju(null);
     setPdfBlob(null);
+    setMessage("");
     setError("");
   }
 
@@ -90,6 +94,7 @@ export default function AdminPage() {
 
     setPartnerSaju(null);
     setPdfBlob(null);
+    setMessage("");
     setError("");
   }
 
@@ -98,8 +103,12 @@ export default function AdminPage() {
   ) {
     setProductId(id);
 
+    setCustomer(EMPTY_PERSON);
+    setPartner(EMPTY_PERSON);
+
     setCustomerSaju(null);
     setPartnerSaju(null);
+
     setPdfBlob(null);
     setMessage("");
     setError("");
@@ -169,7 +178,9 @@ export default function AdminPage() {
 
       if (target === "customer") {
         setCustomerSaju(result);
-        setMessage("본인 사주 원국 계산이 완료되었습니다.");
+        setMessage(
+          "고객 사주 원국 계산이 완료되었습니다."
+        );
       } else {
         setPartnerSaju(result);
         setMessage(
@@ -195,32 +206,29 @@ export default function AdminPage() {
     }
   }
 
-  async function handleCustomerCalculate() {
-    await calculateSaju(customer, "customer");
-  }
-
-  async function handlePartnerCalculate() {
-    await calculateSaju(partner, "partner");
-  }
-
   async function handleAnalysis() {
     setError("");
     setMessage("");
     setPdfBlob(null);
+
+    if (!productId || !selectedProduct) {
+      setError("먼저 분석 상품을 선택해주세요.");
+      return;
+    }
 
     const customerValidation =
       validatePerson(customer);
 
     if (customerValidation) {
       setError(
-        `본인 정보: ${customerValidation}`
+        `고객 기본 정보: ${customerValidation}`
       );
       return;
     }
 
     if (!customerSaju) {
       setError(
-        "먼저 본인의 사주 원국을 계산해주세요."
+        "먼저 고객 사주를 계산해주세요."
       );
       return;
     }
@@ -231,14 +239,14 @@ export default function AdminPage() {
 
       if (partnerValidation) {
         setError(
-          `상대방 정보: ${partnerValidation}`
+          `상대방 기본 정보: ${partnerValidation}`
         );
         return;
       }
 
       if (!partnerSaju) {
         setError(
-          "궁합 분석을 위해 상대방 사주 원국을 먼저 계산해주세요."
+          "먼저 상대방 사주를 계산해주세요."
         );
         return;
       }
@@ -256,12 +264,16 @@ export default function AdminPage() {
           },
           body: JSON.stringify({
             productId,
+
             customer,
+
             partner: isCompatibility
               ? partner
               : undefined,
+
             fourPillars:
               customerSaju.fourPillars,
+
             fiveElements:
               customerSaju.fiveElements,
 
@@ -294,7 +306,7 @@ export default function AdminPage() {
       }
 
       setMessage(
-        "AI 분석이 완료되었습니다. 이제 PDF를 생성할 수 있습니다."
+        "AI 분석이 완료되었습니다. PDF를 생성하고 있습니다."
       );
 
       await createPdf(data.result);
@@ -352,7 +364,7 @@ export default function AdminPage() {
       setPdfBlob(blob);
 
       setMessage(
-        "분석과 PDF 생성이 모두 완료되었습니다."
+        "AI 분석과 PDF 생성이 모두 완료되었습니다."
       );
     } catch (err) {
       setError(
@@ -381,11 +393,9 @@ export default function AdminPage() {
 
     a.href = url;
 
-    const productName =
-      selectedProduct?.name || "사주분석";
-
-    a.download =
-      `${productName}_사주분석.pdf`;
+    a.download = `${
+      selectedProduct?.name || "사주분석"
+    }_사주분석.pdf`;
 
     document.body.appendChild(a);
     a.click();
@@ -447,7 +457,7 @@ export default function AdminPage() {
       }
 
       setError(
-        "공유 기능을 사용할 수 없어 PDF 다운로드 방식으로 진행합니다."
+        "공유 기능을 사용할 수 없어 다운로드 방식으로 진행합니다."
       );
 
       downloadPdf();
@@ -455,14 +465,18 @@ export default function AdminPage() {
   }
 
   function resetAll() {
+    setProductId(null);
+
     setCustomer(EMPTY_PERSON);
     setPartner(EMPTY_PERSON);
+
     setCustomerSaju(null);
     setPartnerSaju(null);
+
     setPdfBlob(null);
+
     setMessage("");
     setError("");
-    setProductId("free");
   }
 
   return (
@@ -470,7 +484,7 @@ export default function AdminPage() {
       <div className="mx-auto max-w-5xl">
 
         {/* 헤더 */}
-        <div className="mb-6">
+        <div className="mb-7">
           <div className="mb-2 inline-flex rounded-full bg-[#111827] px-4 py-2 text-sm font-semibold text-white">
             AI SAJU ADMIN
           </div>
@@ -480,7 +494,7 @@ export default function AdminPage() {
           </h1>
 
           <p className="mt-2 text-sm text-gray-500">
-            상품을 선택하고 사주를 계산한 뒤 AI 분석 PDF를 생성합니다.
+            분석할 상품을 먼저 선택해주세요.
           </p>
         </div>
 
@@ -498,272 +512,22 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* 1. 고객 정보 */}
+        {/* 1. 상품 선택 */}
         <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#111827] text-sm font-bold text-white">
               1
             </div>
 
-            <h2 className="text-xl font-bold">
-              고객 정보
-            </h2>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-
             <div>
-              <label className="mb-2 block text-sm font-semibold">
-                생년월일
-              </label>
-
-              <input
-                type="date"
-                value={customer.birthDate}
-                onChange={(e) =>
-                  updateCustomer(
-                    "birthDate",
-                    e.target.value
-                  )
-                }
-                className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none focus:border-black"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-semibold">
-                출생시간
-              </label>
-
-              <input
-                type="time"
-                value={customer.birthTime}
-                onChange={(e) =>
-                  updateCustomer(
-                    "birthTime",
-                    e.target.value
-                  )
-                }
-                className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none focus:border-black"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-semibold">
-                성별
-              </label>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateCustomer(
-                      "gender",
-                      "남성"
-                    )
-                  }
-                  className={`rounded-xl border px-4 py-3 font-semibold ${
-                    customer.gender === "남성"
-                      ? "border-black bg-black text-white"
-                      : "border-gray-200 bg-white"
-                  }`}
-                >
-                  남성
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateCustomer(
-                      "gender",
-                      "여성"
-                    )
-                  }
-                  className={`rounded-xl border px-4 py-3 font-semibold ${
-                    customer.gender === "여성"
-                      ? "border-black bg-black text-white"
-                      : "border-gray-200 bg-white"
-                  }`}
-                >
-                  여성
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleCustomerCalculate}
-            disabled={loadingCustomer}
-            className="mt-5 w-full rounded-xl bg-[#111827] px-5 py-3.5 font-bold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loadingCustomer
-              ? "사주 계산 중..."
-              : "본인 사주 계산"}
-          </button>
-        </section>
-
-        {/* 고객 원국 */}
-        {customerSaju && (
-          <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#111827] text-sm font-bold text-white">
-                2
-              </div>
-
               <h2 className="text-xl font-bold">
-                계산된 사주 원국
+                분석 상품 선택
               </h2>
+
+              <p className="mt-1 text-sm text-gray-500">
+                원하는 상품을 클릭하면 고객 정보 입력란이 나타납니다.
+              </p>
             </div>
-
-            <FourPillars
-              data={customerSaju.fourPillars}
-            />
-
-            <FiveElements
-              data={customerSaju.fiveElements}
-            />
-          </section>
-        )}
-
-        {/* 궁합 상대방 */}
-        {isCompatibility && (
-          <section className="mb-6 rounded-3xl border-2 border-[#e7d8f0] bg-white p-6 shadow-sm">
-
-            <div className="mb-2 flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#8b4c9d] text-sm font-bold text-white">
-                ♥
-              </div>
-
-              <h2 className="text-xl font-bold">
-                궁합 상대방 정보
-              </h2>
-            </div>
-
-            <p className="mb-5 text-sm text-gray-500">
-              궁합 분석은 두 사람의 사주가 모두 계산되어야 시작할 수 있습니다.
-            </p>
-
-            <div className="grid gap-4 md:grid-cols-3">
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold">
-                  상대방 생년월일
-                </label>
-
-                <input
-                  type="date"
-                  value={partner.birthDate}
-                  onChange={(e) =>
-                    updatePartner(
-                      "birthDate",
-                      e.target.value
-                    )
-                  }
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none focus:border-[#8b4c9d]"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold">
-                  상대방 출생시간
-                </label>
-
-                <input
-                  type="time"
-                  value={partner.birthTime}
-                  onChange={(e) =>
-                    updatePartner(
-                      "birthTime",
-                      e.target.value
-                    )
-                  }
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none focus:border-[#8b4c9d]"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold">
-                  상대방 성별
-                </label>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updatePartner(
-                        "gender",
-                        "남성"
-                      )
-                    }
-                    className={`rounded-xl border px-4 py-3 font-semibold ${
-                      partner.gender === "남성"
-                        ? "border-[#8b4c9d] bg-[#8b4c9d] text-white"
-                        : "border-gray-200 bg-white"
-                    }`}
-                  >
-                    남성
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updatePartner(
-                        "gender",
-                        "여성"
-                      )
-                    }
-                    className={`rounded-xl border px-4 py-3 font-semibold ${
-                      partner.gender === "여성"
-                        ? "border-[#8b4c9d] bg-[#8b4c9d] text-white"
-                        : "border-gray-200 bg-white"
-                    }`}
-                  >
-                    여성
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handlePartnerCalculate}
-              disabled={loadingPartner}
-              className="mt-5 w-full rounded-xl bg-[#8b4c9d] px-5 py-3.5 font-bold text-white transition hover:bg-[#713c81] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {loadingPartner
-                ? "상대방 사주 계산 중..."
-                : "상대방 사주 계산"}
-            </button>
-
-            {partnerSaju && (
-              <div className="mt-6 border-t border-gray-100 pt-6">
-                <div className="mb-4 text-sm font-bold text-[#8b4c9d]">
-                  ✓ 상대방 사주 계산 완료
-                </div>
-
-                <FourPillars
-                  data={partnerSaju.fourPillars}
-                />
-
-                <FiveElements
-                  data={partnerSaju.fiveElements}
-                />
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* 상품 선택 */}
-        <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#111827] text-sm font-bold text-white">
-              {isCompatibility ? "4" : "3"}
-            </div>
-
-            <h2 className="text-xl font-bold">
-              선택 상품 분석
-            </h2>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -782,8 +546,11 @@ export default function AdminPage() {
                   }
                   className={`rounded-2xl border p-5 text-left transition ${
                     selected
-                      ? "border-[#111827] bg-[#f3f4f6] shadow-sm"
-                      : "border-gray-200 bg-white hover:border-gray-400"
+                      ? product.id ===
+                        "compatibility"
+                        ? "border-[#8b4c9d] bg-[#faf5fc] shadow-md"
+                        : "border-[#111827] bg-[#f3f4f6] shadow-md"
+                      : "border-gray-200 bg-white hover:border-gray-400 hover:shadow-sm"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -792,7 +559,7 @@ export default function AdminPage() {
                         {product.name}
                       </div>
 
-                      <div className="mt-1 text-sm font-bold">
+                      <div className="mt-1 text-lg font-bold">
                         {product.price.toLocaleString()}
                         원
                       </div>
@@ -803,7 +570,14 @@ export default function AdminPage() {
                     </div>
 
                     {selected && (
-                      <div className="rounded-full bg-[#111827] px-3 py-1 text-xs font-bold text-white">
+                      <div
+                        className={`rounded-full px-3 py-1 text-xs font-bold text-white ${
+                          product.id ===
+                          "compatibility"
+                            ? "bg-[#8b4c9d]"
+                            : "bg-[#111827]"
+                        }`}
+                      >
                         선택
                       </div>
                     )}
@@ -814,97 +588,392 @@ export default function AdminPage() {
           </div>
         </section>
 
-        {/* 분석 실행 */}
-        <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
-          <div className="rounded-2xl bg-gradient-to-r from-[#111827] to-[#252b3a] p-6 text-white">
-
-            <div className="text-sm font-semibold text-gray-300">
-              현재 선택 상품
+        {/* 상품 미선택 */}
+        {!productId && (
+          <section className="rounded-3xl border border-dashed border-gray-300 bg-white p-10 text-center">
+            <div className="text-4xl">
+              🔮
             </div>
 
-            <div className="mt-1 text-2xl font-bold">
-              {selectedProduct?.name}
+            <div className="mt-3 text-lg font-bold">
+              분석 상품을 선택해주세요
             </div>
 
-            <div className="mt-1 text-sm text-gray-300">
-              {selectedProduct?.description}
-            </div>
+            <p className="mt-2 text-sm text-gray-500">
+              상품을 선택하면 필요한 고객 정보 입력 화면이 나타납니다.
+            </p>
+          </section>
+        )}
 
-            {isCompatibility && (
-              <div className="mt-4 rounded-xl bg-white/10 px-4 py-3 text-sm">
-                {partnerSaju
-                  ? "✓ 본인 + 상대방 사주 계산 완료"
-                  : "○ 상대방 사주 계산이 필요합니다."}
+        {/* 상품 선택 후 진행 */}
+        {productId && (
+          <>
+            {/* 2. 기본 정보 */}
+            <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#111827] text-sm font-bold text-white">
+                  2
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-bold">
+                    고객 기본 정보
+                  </h2>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    {selectedProduct?.name}
+                    {" "}
+                    분석을 위한 정보를 입력해주세요.
+                  </p>
+                </div>
               </div>
+
+              {/* 고객 카드 */}
+              <PersonForm
+                title="고객 기본 정보"
+                person={customer}
+                onChange={updateCustomer}
+                accent="#111827"
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  calculateSaju(
+                    customer,
+                    "customer"
+                  )
+                }
+                disabled={loadingCustomer}
+                className="mt-5 w-full rounded-xl bg-[#111827] px-5 py-3.5 font-bold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loadingCustomer
+                  ? "고객 사주 계산 중..."
+                  : "고객 사주 계산"}
+              </button>
+
+              {customerSaju && (
+                <div className="mt-6 border-t border-gray-100 pt-6">
+                  <div className="mb-4 flex items-center gap-2 text-sm font-bold text-green-700">
+                    <span>✓</span>
+                    고객 사주 계산 완료
+                  </div>
+
+                  <FourPillars
+                    data={customerSaju.fourPillars}
+                  />
+
+                  <FiveElements
+                    data={customerSaju.fiveElements}
+                  />
+                </div>
+              )}
+            </section>
+
+            {/* 궁합 상대방 */}
+            {isCompatibility && (
+              <section className="mb-6 rounded-3xl border-2 border-[#e5d3eb] bg-white p-6 shadow-sm">
+
+                <div className="mb-5 flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#8b4c9d] text-sm font-bold text-white">
+                    3
+                  </div>
+
+                  <div>
+                    <h2 className="text-xl font-bold">
+                      상대방 기본 정보
+                    </h2>
+
+                    <p className="mt-1 text-sm text-gray-500">
+                      궁합 분석을 위해 상대방의 정보도 입력해주세요.
+                    </p>
+                  </div>
+                </div>
+
+                <PersonForm
+                  title="상대방 기본 정보"
+                  person={partner}
+                  onChange={updatePartner}
+                  accent="#8b4c9d"
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    calculateSaju(
+                      partner,
+                      "partner"
+                    )
+                  }
+                  disabled={loadingPartner}
+                  className="mt-5 w-full rounded-xl bg-[#8b4c9d] px-5 py-3.5 font-bold text-white transition hover:bg-[#713c81] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {loadingPartner
+                    ? "상대방 사주 계산 중..."
+                    : "상대방 사주 계산"}
+                </button>
+
+                {partnerSaju && (
+                  <div className="mt-6 border-t border-[#eee2f2] pt-6">
+                    <div className="mb-4 flex items-center gap-2 text-sm font-bold text-[#8b4c9d]">
+                      <span>✓</span>
+                      상대방 사주 계산 완료
+                    </div>
+
+                    <FourPillars
+                      data={
+                        partnerSaju.fourPillars
+                      }
+                    />
+
+                    <FiveElements
+                      data={
+                        partnerSaju.fiveElements
+                      }
+                    />
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* 분석 실행 */}
+            <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#111827] text-sm font-bold text-white">
+                  {isCompatibility
+                    ? "4"
+                    : "3"}
+                </div>
+
+                <h2 className="text-xl font-bold">
+                  AI 분석 및 PDF
+                </h2>
+              </div>
+
+              <div className="rounded-2xl bg-gradient-to-r from-[#111827] to-[#252b3a] p-6 text-white">
+
+                <div className="text-sm font-semibold text-gray-300">
+                  선택 상품
+                </div>
+
+                <div className="mt-1 text-2xl font-bold">
+                  {selectedProduct?.name}
+                </div>
+
+                <div className="mt-1 text-sm text-gray-300">
+                  {selectedProduct?.price.toLocaleString()}
+                  원
+                </div>
+
+                {isCompatibility && (
+                  <div className="mt-4 rounded-xl bg-white/10 px-4 py-3 text-sm">
+                    <div>
+                      고객 사주{" "}
+                      {customerSaju
+                        ? "✓"
+                        : "○"}
+                    </div>
+
+                    <div className="mt-1">
+                      상대방 사주{" "}
+                      {partnerSaju
+                        ? "✓"
+                        : "○"}
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleAnalysis}
+                  disabled={
+                    analyzing ||
+                    pdfLoading ||
+                    !customerSaju ||
+                    (isCompatibility &&
+                      !partnerSaju)
+                  }
+                  className="mt-5 w-full rounded-xl bg-white px-5 py-4 font-bold text-[#111827] transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {analyzing
+                    ? "AI 분석 중..."
+                    : pdfLoading
+                    ? "PDF 생성 중..."
+                    : isCompatibility &&
+                      !partnerSaju
+                    ? "두 사람의 사주를 모두 계산해주세요"
+                    : !customerSaju
+                    ? "고객 사주를 먼저 계산해주세요"
+                    : "AI 분석 시작"}
+                </button>
+              </div>
+            </section>
+
+            {/* PDF 완료 */}
+            {pdfBlob && (
+              <section className="mb-6 rounded-3xl border border-green-200 bg-white p-6 shadow-sm">
+                <div className="rounded-2xl bg-green-50 p-5">
+                  <div className="text-lg font-bold text-green-700">
+                    ✓ 분석 및 PDF 생성 완료
+                  </div>
+
+                  <p className="mt-1 text-sm text-green-600">
+                    PDF를 다운로드하거나 모바일에서 바로 공유할 수 있습니다.
+                  </p>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={downloadPdf}
+                    className="rounded-xl bg-[#111827] px-5 py-4 font-bold text-white"
+                  >
+                    PDF 다운로드
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={sharePdf}
+                    className="rounded-xl bg-[#8b4c9d] px-5 py-4 font-bold text-white"
+                  >
+                    PDF 공유하기
+                  </button>
+                </div>
+              </section>
             )}
 
             <button
               type="button"
-              onClick={handleAnalysis}
-              disabled={
-                analyzing ||
-                pdfLoading ||
-                !customerSaju ||
-                (isCompatibility &&
-                  !partnerSaju)
-              }
-              className="mt-5 w-full rounded-xl bg-white px-5 py-4 font-bold text-[#111827] transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={resetAll}
+              className="mb-10 w-full rounded-xl border border-gray-200 bg-white px-5 py-3 font-semibold text-gray-600 hover:bg-gray-50"
             >
-              {analyzing
-                ? "AI 분석 중..."
-                : pdfLoading
-                ? "PDF 생성 중..."
-                : isCompatibility &&
-                  !partnerSaju
-                ? "상대방 사주를 먼저 계산해주세요"
-                : "AI 분석 시작"}
+              처음부터 다시 작성
             </button>
-          </div>
-        </section>
-
-        {/* PDF */}
-        {pdfBlob && (
-          <section className="mb-6 rounded-3xl border border-green-200 bg-white p-6 shadow-sm">
-            <div className="rounded-2xl bg-green-50 p-5">
-              <div className="text-lg font-bold text-green-700">
-                ✓ 분석 및 PDF 생성 완료
-              </div>
-
-              <p className="mt-1 text-sm text-green-600">
-                PDF 파일을 PC에서 다운로드하거나 모바일에서 바로 공유할 수 있습니다.
-              </p>
-            </div>
-
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <button
-                type="button"
-                onClick={downloadPdf}
-                className="rounded-xl bg-[#111827] px-5 py-4 font-bold text-white"
-              >
-                PDF 다운로드
-              </button>
-
-              <button
-                type="button"
-                onClick={sharePdf}
-                className="rounded-xl bg-[#8b4c9d] px-5 py-4 font-bold text-white"
-              >
-                PDF 공유하기
-              </button>
-            </div>
-          </section>
+          </>
         )}
-
-        {/* 초기화 */}
-        <button
-          type="button"
-          onClick={resetAll}
-          className="mb-10 w-full rounded-xl border border-gray-200 bg-white px-5 py-3 font-semibold text-gray-600 hover:bg-gray-50"
-        >
-          처음부터 다시 작성
-        </button>
       </div>
     </main>
+  );
+}
+
+function PersonForm({
+  title,
+  person,
+  onChange,
+  accent,
+}: {
+  title: string;
+  person: PersonData;
+  onChange: (
+    field: keyof PersonData,
+    value: string
+  ) => void;
+  accent: string;
+}) {
+  return (
+    <div className="rounded-2xl bg-[#fafafa] p-5">
+      <div
+        className="mb-4 text-base font-bold"
+        style={{ color: accent }}
+      >
+        {title}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold">
+            생년월일
+          </label>
+
+          <input
+            type="date"
+            value={person.birthDate}
+            onChange={(e) =>
+              onChange(
+                "birthDate",
+                e.target.value
+              )
+            }
+            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold">
+            출생시간
+          </label>
+
+          <input
+            type="time"
+            value={person.birthTime}
+            onChange={(e) =>
+              onChange(
+                "birthTime",
+                e.target.value
+              )
+            }
+            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold">
+            성별
+          </label>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                onChange("gender", "남성")
+              }
+              className={`rounded-xl border px-4 py-3 font-semibold ${
+                person.gender === "남성"
+                  ? "text-white"
+                  : "border-gray-200 bg-white"
+              }`}
+              style={
+                person.gender === "남성"
+                  ? {
+                      backgroundColor:
+                        accent,
+                      borderColor:
+                        accent,
+                    }
+                  : undefined
+              }
+            >
+              남성
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                onChange("gender", "여성")
+              }
+              className={`rounded-xl border px-4 py-3 font-semibold ${
+                person.gender === "여성"
+                  ? "text-white"
+                  : "border-gray-200 bg-white"
+              }`}
+              style={
+                person.gender === "여성"
+                  ? {
+                      backgroundColor:
+                        accent,
+                      borderColor:
+                        accent,
+                    }
+                  : undefined
+              }
+            >
+              여성
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -924,21 +993,27 @@ function FourPillars({
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-      {items.map(([label, item]) => (
-        <div
-          key={label}
-          className="rounded-2xl border border-gray-200 bg-[#fafafa] p-5 text-center"
-        >
-          <div className="text-sm text-gray-500">
-            {label}
-          </div>
+    <div>
+      <h3 className="mb-3 text-lg font-bold">
+        계산된 사주 원국
+      </h3>
 
-          <div className="mt-3 text-2xl font-bold">
-            {String(item ?? "-")}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {items.map(([label, item]) => (
+          <div
+            key={label}
+            className="rounded-2xl border border-gray-200 bg-white p-5 text-center"
+          >
+            <div className="text-sm text-gray-500">
+              {label}
+            </div>
+
+            <div className="mt-3 text-2xl font-bold">
+              {String(item ?? "-")}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
@@ -969,7 +1044,7 @@ function FiveElements({
         {items.map(([label, item]) => (
           <div
             key={label}
-            className="rounded-2xl border border-gray-200 bg-[#fafafa] p-4 text-center"
+            className="rounded-2xl border border-gray-200 bg-white p-4 text-center"
           >
             <div className="text-sm text-gray-500">
               {label}
