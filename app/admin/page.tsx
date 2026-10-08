@@ -132,7 +132,9 @@ export default function AdminPage() {
       (deliveryMethod === "kakao" || deliveryMethod === "both") &&
       !kakaoContact
     ) {
-      setError("카카오톡 수신을 선택했다면 카카오톡 수신 정보를 입력해주세요.");
+      setError(
+        "카카오톡 수신을 선택했다면 카카오톡 수신 정보를 입력해주세요."
+      );
       return;
     }
 
@@ -201,19 +203,75 @@ export default function AdminPage() {
       throw new Error("생성된 PDF 파일이 비어 있습니다.");
     }
 
-    const url = URL.createObjectURL(blob);
+    const arrayBuffer = await blob.arrayBuffer();
+
+    const downloadUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
 
-    link.href = url;
+    link.href = downloadUrl;
     link.download = "ai-saju-result.pdf";
 
     document.body.appendChild(link);
     link.click();
     link.remove();
 
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(downloadUrl);
 
-    setPdfStatus("PDF 생성 및 파일 준비 완료");
+    setPdfStatus("PDF 생성 완료");
+
+    if (deliveryMethod === "email" || deliveryMethod === "both") {
+      if (!customer.email) {
+        throw new Error("이메일 주소가 없습니다.");
+      }
+
+      setPdfStatus("PDF 생성 완료 · 이메일 발송 중...");
+
+      const bytes = new Uint8Array(arrayBuffer);
+
+      let binary = "";
+      const chunkSize = 0x8000;
+
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(
+          i,
+          Math.min(i + chunkSize, bytes.length)
+        );
+
+        binary += String.fromCharCode(...chunk);
+      }
+
+      const pdfBase64 = btoa(binary);
+
+      const emailResponse = await fetch("/api/admin-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          to: customer.email,
+          productName: selectedProduct.name,
+          pdfBase64,
+        }),
+      });
+
+      const emailData = await emailResponse.json();
+
+      if (!emailResponse.ok) {
+        throw new Error(
+          emailData.error || "이메일 발송에 실패했습니다."
+        );
+      }
+
+      setPdfStatus("PDF 생성 완료 · 이메일 발송 완료");
+    }
+
+    if (deliveryMethod === "kakao" || deliveryMethod === "both") {
+      setPdfStatus((current) =>
+        current.includes("이메일 발송 완료")
+          ? `${current} · 카카오톡 발송 대기`
+          : "PDF 생성 완료 · 카카오톡 발송 대기"
+      );
+    }
   }
 
   async function generateResult() {
@@ -269,7 +327,9 @@ export default function AdminPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "AI 분석 생성에 실패했습니다.");
+        throw new Error(
+          data.error || "AI 분석 생성에 실패했습니다."
+        );
       }
 
       await generatePdf(data.result);
@@ -277,7 +337,9 @@ export default function AdminPage() {
       setResult("완료");
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "분석 생성 중 오류가 발생했습니다."
+        e instanceof Error
+          ? e.message
+          : "분석 생성 중 오류가 발생했습니다."
       );
       setPdfStatus("");
     } finally {
@@ -334,15 +396,31 @@ export default function AdminPage() {
             marginBottom: 20,
           }}
         >
-          <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1 }}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: 1,
+            }}
+          >
             ADMIN TEST MODE
           </div>
 
-          <h1 style={{ margin: "8px 0", fontSize: 30 }}>
+          <h1
+            style={{
+              margin: "8px 0",
+              fontSize: 30,
+            }}
+          >
             사주 관리자 분석실
           </h1>
 
-          <p style={{ margin: 0, opacity: 0.8 }}>
+          <p
+            style={{
+              margin: 0,
+              opacity: 0.8,
+            }}
+          >
             고객 정보를 입력하고 상품을 선택한 뒤 해당 상품의 테스트 결과만
             생성합니다.
           </p>
@@ -386,16 +464,21 @@ export default function AdminPage() {
             <div style={gridStyle}>
               <label>
                 결과 수신 방법
+
                 <select
                   style={inputStyle}
                   value={deliveryMethod}
                   onChange={(e) =>
-                    setDeliveryMethod(e.target.value as DeliveryMethod)
+                    setDeliveryMethod(
+                      e.target.value as DeliveryMethod
+                    )
                   }
                 >
                   <option value="email">이메일</option>
                   <option value="kakao">카카오톡</option>
-                  <option value="both">이메일 + 카카오톡</option>
+                  <option value="both">
+                    이메일 + 카카오톡
+                  </option>
                 </select>
               </label>
 
@@ -403,6 +486,7 @@ export default function AdminPage() {
                 deliveryMethod === "both") && (
                 <label>
                   이메일 주소
+
                   <input
                     style={inputStyle}
                     type="email"
@@ -422,11 +506,14 @@ export default function AdminPage() {
                 deliveryMethod === "both") && (
                 <label>
                   카카오톡 수신 정보
+
                   <input
                     style={inputStyle}
                     type="text"
                     value={kakaoContact}
-                    onChange={(e) => setKakaoContact(e.target.value)}
+                    onChange={(e) =>
+                      setKakaoContact(e.target.value)
+                    }
                     placeholder="카카오톡 수신 정보"
                   />
                 </label>
@@ -434,6 +521,7 @@ export default function AdminPage() {
 
               <label>
                 생년월일
+
                 <input
                   style={inputStyle}
                   type="date"
@@ -449,6 +537,7 @@ export default function AdminPage() {
 
               <label>
                 태어난 시간
+
                 <select
                   style={inputStyle}
                   value={customer.birthTime}
@@ -471,13 +560,16 @@ export default function AdminPage() {
 
               <label>
                 성별
+
                 <select
                   style={inputStyle}
                   value={customer.gender}
                   onChange={(e) =>
                     setCustomer({
                       ...customer,
-                      gender: e.target.value as "남성" | "여성",
+                      gender: e.target.value as
+                        | "남성"
+                        | "여성",
                     })
                   }
                 >
@@ -492,37 +584,81 @@ export default function AdminPage() {
               onClick={handleCustomerCalculate}
               disabled={loading}
             >
-              {loading ? "만세력 계산 중..." : "다음 → 만세력 계산"}
+              {loading
+                ? "만세력 계산 중..."
+                : "다음 → 만세력 계산"}
             </button>
           </section>
         )}
 
         {step >= 2 && pillars && elements && (
           <section style={cardStyle}>
-            <StepTitle number="2" title="계산된 사주 원국" />
+            <StepTitle
+              number="2"
+              title="계산된 사주 원국"
+            />
 
             <div style={pillarGrid}>
-              <InfoBox title="년주" value={pillars.year} />
-              <InfoBox title="월주" value={pillars.month} />
-              <InfoBox title="일주" value={pillars.day} />
-              <InfoBox title="시주" value={pillars.time} />
+              <InfoBox
+                title="년주"
+                value={pillars.year}
+              />
+
+              <InfoBox
+                title="월주"
+                value={pillars.month}
+              />
+
+              <InfoBox
+                title="일주"
+                value={pillars.day}
+              />
+
+              <InfoBox
+                title="시주"
+                value={pillars.time}
+              />
             </div>
 
             <div style={{ marginTop: 16 }}>
               <strong>오행</strong>
 
               <div style={elementGrid}>
-                <InfoBox title="木" value={`${elements.wood}`} />
-                <InfoBox title="火" value={`${elements.fire}`} />
-                <InfoBox title="土" value={`${elements.earth}`} />
-                <InfoBox title="金" value={`${elements.metal}`} />
-                <InfoBox title="水" value={`${elements.water}`} />
+                <InfoBox
+                  title="木"
+                  value={`${elements.wood}`}
+                />
+
+                <InfoBox
+                  title="火"
+                  value={`${elements.fire}`}
+                />
+
+                <InfoBox
+                  title="土"
+                  value={`${elements.earth}`}
+                />
+
+                <InfoBox
+                  title="金"
+                  value={`${elements.metal}`}
+                />
+
+                <InfoBox
+                  title="水"
+                  value={`${elements.water}`}
+                />
               </div>
             </div>
 
             {step === 2 && (
               <div style={{ marginTop: 20 }}>
-                <h2 style={{ fontSize: 20, marginBottom: 12 }}>
+                <h2
+                  style={{
+                    fontSize: 20,
+                    marginBottom: 12,
+                  }}
+                >
                   3. 분석 상품 선택
                 </h2>
 
@@ -530,11 +666,14 @@ export default function AdminPage() {
                   {ADMIN_PRODUCTS.map((product) => (
                     <button
                       key={product.id}
-                      onClick={() => handleProductSelect(product)}
+                      onClick={() =>
+                        handleProductSelect(product)
+                      }
                       style={{
                         ...productButton,
                         border:
-                          selectedProduct?.id === product.id
+                          selectedProduct?.id ===
+                          product.id
                             ? "2px solid #111827"
                             : "1px solid #e5e7eb",
                       }}
@@ -577,7 +716,10 @@ export default function AdminPage() {
 
         {step === 3 && selectedProduct && (
           <section style={cardStyle}>
-            <StepTitle number="3" title="선택 상품 테스트 분석" />
+            <StepTitle
+              number="3"
+              title="선택 상품 테스트 분석"
+            />
 
             <div
               style={{
@@ -624,11 +766,14 @@ export default function AdminPage() {
                   marginBottom: 18,
                 }}
               >
-                <h3 style={{ marginTop: 0 }}>상대방 정보</h3>
+                <h3 style={{ marginTop: 0 }}>
+                  상대방 정보
+                </h3>
 
                 <div style={gridStyle}>
                   <label>
                     상대방 이메일(선택)
+
                     <input
                       style={inputStyle}
                       type="email"
@@ -644,6 +789,7 @@ export default function AdminPage() {
 
                   <label>
                     상대방 생년월일
+
                     <input
                       style={inputStyle}
                       type="date"
@@ -659,6 +805,7 @@ export default function AdminPage() {
 
                   <label>
                     상대방 태어난 시간
+
                     <select
                       style={inputStyle}
                       value={partner.birthTime}
@@ -669,10 +816,15 @@ export default function AdminPage() {
                         })
                       }
                     >
-                      <option value="">시간 선택</option>
+                      <option value="">
+                        시간 선택
+                      </option>
 
                       {TIME_RANGES.map((time) => (
-                        <option key={time} value={time}>
+                        <option
+                          key={time}
+                          value={time}
+                        >
                           {time}
                         </option>
                       ))}
@@ -681,18 +833,26 @@ export default function AdminPage() {
 
                   <label>
                     상대방 성별
+
                     <select
                       style={inputStyle}
                       value={partner.gender}
                       onChange={(e) =>
                         setPartner({
                           ...partner,
-                          gender: e.target.value as "남성" | "여성",
+                          gender: e.target.value as
+                            | "남성"
+                            | "여성",
                         })
                       }
                     >
-                      <option value="남성">남성</option>
-                      <option value="여성">여성</option>
+                      <option value="남성">
+                        남성
+                      </option>
+
+                      <option value="여성">
+                        여성
+                      </option>
                     </select>
                   </label>
                 </div>
@@ -740,14 +900,16 @@ export default function AdminPage() {
               <div
                 style={{
                   marginTop: 24,
-                  borderTop: "1px solid #e5e7eb",
+                  borderTop:
+                    "1px solid #e5e7eb",
                   paddingTop: 24,
                 }}
               >
                 <div
                   style={{
                     background: "#f0fdf4",
-                    border: "1px solid #bbf7d0",
+                    border:
+                      "1px solid #bbf7d0",
                     borderRadius: 14,
                     padding: 20,
                     color: "#166534",
@@ -762,8 +924,13 @@ export default function AdminPage() {
                     분석 처리 완료
                   </div>
 
-                  <div style={{ marginTop: 8 }}>
-                    AI 분석이 생성되었고 PDF 파일이 정상적으로 준비되었습니다.
+                  <div
+                    style={{
+                      marginTop: 8,
+                    }}
+                  >
+                    AI 분석이 생성되었고
+                    PDF 파일 처리가 완료되었습니다.
                   </div>
 
                   <div
@@ -876,13 +1043,15 @@ const cardStyle = {
   background: "#fff",
   borderRadius: 18,
   padding: 24,
-  boxShadow: "0 5px 20px rgba(0,0,0,0.05)",
+  boxShadow:
+    "0 5px 20px rgba(0,0,0,0.05)",
   marginBottom: 20,
 };
 
 const gridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gridTemplateColumns:
+    "repeat(auto-fit, minmax(220px, 1fr))",
   gap: 14,
   marginBottom: 20,
 };
@@ -920,7 +1089,8 @@ const secondaryButton = {
 
 const productGrid = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+  gridTemplateColumns:
+    "repeat(auto-fit, minmax(240px, 1fr))",
   gap: 12,
 };
 
