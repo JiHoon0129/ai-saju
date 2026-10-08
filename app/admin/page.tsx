@@ -1,385 +1,374 @@
 "use client";
 
 import { useState } from "react";
-import type { AdminProduct } from "../../lib/admin-products";
-import { ADMIN_PRODUCTS } from "../../lib/admin-products";
-
-type FourPillars = {
-  year: string;
-  month: string;
-  day: string;
-  time: string;
-};
-
-type FiveElements = {
-  wood: number;
-  fire: number;
-  earth: number;
-  metal: number;
-  water: number;
-};
+import { ADMIN_PRODUCTS, type AdminProductId } from "@/lib/admin-products";
 
 type PersonData = {
   birthDate: string;
   birthTime: string;
-  gender: "남성" | "여성";
+  gender: string;
 };
 
-const TIME_RANGES = [
-  "00:00~01:30",
-  "01:30~03:30",
-  "03:30~05:30",
-  "05:30~07:30",
-  "07:30~09:30",
-  "09:30~11:30",
-  "11:30~13:30",
-  "13:30~15:30",
-  "15:30~17:30",
-  "17:30~19:30",
-  "19:30~21:30",
-  "21:30~22:30",
-  "22:30~00:00",
-];
+type SajuData = {
+  fourPillars: unknown;
+  fiveElements: unknown;
+};
 
-const formatPrice = (price: number) =>
-  price === 0
-    ? "무료"
-    : `${price.toLocaleString("ko-KR")}원`;
+const EMPTY_PERSON: PersonData = {
+  birthDate: "",
+  birthTime: "",
+  gender: "",
+};
 
 export default function AdminPage() {
-  const [customer, setCustomer] = useState<PersonData>({
-    birthDate: "",
-    birthTime: "",
-    gender: "남성",
-  });
+  const [productId, setProductId] =
+    useState<AdminProductId>("free");
 
-  const [selectedProduct, setSelectedProduct] =
-    useState<AdminProduct | null>(null);
+  const [customer, setCustomer] =
+    useState<PersonData>(EMPTY_PERSON);
 
-  const [partner, setPartner] = useState<PersonData>({
-    birthDate: "",
-    birthTime: "",
-    gender: "여성",
-  });
+  const [partner, setPartner] =
+    useState<PersonData>(EMPTY_PERSON);
 
-  const [result, setResult] = useState("");
-  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
-  const [pdfFileName, setPdfFileName] =
-    useState("ai-saju-result.pdf");
+  const [customerSaju, setCustomerSaju] =
+    useState<SajuData | null>(null);
 
-  const [pdfStatus, setPdfStatus] = useState("");
+  const [partnerSaju, setPartnerSaju] =
+    useState<SajuData | null>(null);
 
-  const [pillars, setPillars] =
-    useState<FourPillars | null>(null);
+  const [loadingCustomer, setLoadingCustomer] =
+    useState(false);
 
-  const [elements, setElements] =
-    useState<FiveElements | null>(null);
+  const [loadingPartner, setLoadingPartner] =
+    useState(false);
 
-  const [partnerPillars, setPartnerPillars] =
-    useState<FourPillars | null>(null);
+  const [analyzing, setAnalyzing] =
+    useState(false);
 
-  const [partnerElements, setPartnerElements] =
-    useState<FiveElements | null>(null);
+  const [pdfLoading, setPdfLoading] =
+    useState(false);
 
-  const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [error, setError] = useState("");
+  const [pdfBlob, setPdfBlob] =
+    useState<Blob | null>(null);
 
-  async function calculatePerson(
-    person: PersonData
-  ) {
-    const response = await fetch(
-      "/api/admin-saju",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          birthDate: person.birthDate,
-          birthTime: person.birthTime,
-          gender: person.gender,
-        }),
-      }
+  const [message, setMessage] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  const isCompatibility =
+    productId === "compatibility";
+
+  const selectedProduct =
+    ADMIN_PRODUCTS.find(
+      (product) => product.id === productId
     );
 
-    const data = await response.json();
+  function updateCustomer(
+    field: keyof PersonData,
+    value: string
+  ) {
+    setCustomer((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
 
-    if (!response.ok) {
-      throw new Error(
-        data.error ||
-          "만세력 계산에 실패했습니다."
-      );
+    setCustomerSaju(null);
+    setPdfBlob(null);
+    setError("");
+  }
+
+  function updatePartner(
+    field: keyof PersonData,
+    value: string
+  ) {
+    setPartner((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+
+    setPartnerSaju(null);
+    setPdfBlob(null);
+    setError("");
+  }
+
+  function handleProductChange(
+    id: AdminProductId
+  ) {
+    setProductId(id);
+
+    setCustomerSaju(null);
+    setPartnerSaju(null);
+    setPdfBlob(null);
+    setMessage("");
+    setError("");
+  }
+
+  function validatePerson(person: PersonData) {
+    if (!person.birthDate) {
+      return "생년월일을 입력해주세요.";
     }
 
-    return data as {
-      fourPillars: FourPillars;
-      fiveElements: FiveElements;
-    };
+    if (!person.birthTime) {
+      return "출생시간을 입력해주세요.";
+    }
+
+    if (!person.gender) {
+      return "성별을 선택해주세요.";
+    }
+
+    return "";
+  }
+
+  async function calculateSaju(
+    person: PersonData,
+    target: "customer" | "partner"
+  ) {
+    const validation = validatePerson(person);
+
+    if (validation) {
+      setError(validation);
+      return null;
+    }
+
+    if (target === "customer") {
+      setLoadingCustomer(true);
+    } else {
+      setLoadingPartner(true);
+    }
+
+    setError("");
+    setMessage("");
+
+    try {
+      const response = await fetch(
+        "/api/admin-saju",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(person),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            "사주 계산 중 오류가 발생했습니다."
+        );
+      }
+
+      const result: SajuData = {
+        fourPillars: data.fourPillars,
+        fiveElements: data.fiveElements,
+      };
+
+      if (target === "customer") {
+        setCustomerSaju(result);
+        setMessage("본인 사주 원국 계산이 완료되었습니다.");
+      } else {
+        setPartnerSaju(result);
+        setMessage(
+          "상대방 사주 원국 계산이 완료되었습니다."
+        );
+      }
+
+      return result;
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "사주 계산 중 오류가 발생했습니다."
+      );
+
+      return null;
+    } finally {
+      if (target === "customer") {
+        setLoadingCustomer(false);
+      } else {
+        setLoadingPartner(false);
+      }
+    }
   }
 
   async function handleCustomerCalculate() {
-    setError("");
-    setResult("");
-    setPdfBlob(null);
-    setPdfStatus("");
+    await calculateSaju(customer, "customer");
+  }
 
-    if (
-      !customer.birthDate ||
-      !customer.birthTime
-    ) {
+  async function handlePartnerCalculate() {
+    await calculateSaju(partner, "partner");
+  }
+
+  async function handleAnalysis() {
+    setError("");
+    setMessage("");
+    setPdfBlob(null);
+
+    const customerValidation =
+      validatePerson(customer);
+
+    if (customerValidation) {
       setError(
-        "생년월일과 태어난 시간을 모두 입력해주세요."
+        `본인 정보: ${customerValidation}`
       );
       return;
     }
 
-    setLoading(true);
-
-    try {
-      const data =
-        await calculatePerson(customer);
-
-      setPillars(data.fourPillars);
-      setElements(data.fiveElements);
-
-      setStep(2);
-    } catch (e) {
+    if (!customerSaju) {
       setError(
-        e instanceof Error
-          ? e.message
-          : "계산 중 오류가 발생했습니다."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function handleProductSelect(
-    product: AdminProduct
-  ) {
-    setError("");
-    setResult("");
-    setPdfBlob(null);
-    setPdfStatus("");
-    setSelectedProduct(product);
-    setStep(3);
-  }
-
-  async function generateResult() {
-    if (
-      !selectedProduct ||
-      !pillars ||
-      !elements
-    ) {
-      setError(
-        "상품과 기본 사주 정보가 필요합니다."
+        "먼저 본인의 사주 원국을 계산해주세요."
       );
       return;
     }
 
-    setError("");
-    setResult("");
-    setPdfBlob(null);
-    setPdfStatus("");
-    setLoading(true);
+    if (isCompatibility) {
+      const partnerValidation =
+        validatePerson(partner);
 
-    try {
-      let currentPartnerPillars =
-        partnerPillars;
-
-      let currentPartnerElements =
-        partnerElements;
-
-      if (
-        selectedProduct.id ===
-        "compatibility"
-      ) {
-        if (
-          !partner.birthDate ||
-          !partner.birthTime
-        ) {
-          throw new Error(
-            "궁합 분석은 상대방 생년월일과 태어난 시간을 입력해주세요."
-          );
-        }
-
-        const partnerData =
-          await calculatePerson(partner);
-
-        currentPartnerPillars =
-          partnerData.fourPillars;
-
-        currentPartnerElements =
-          partnerData.fiveElements;
-
-        setPartnerPillars(
-          currentPartnerPillars
+      if (partnerValidation) {
+        setError(
+          `상대방 정보: ${partnerValidation}`
         );
-
-        setPartnerElements(
-          currentPartnerElements
-        );
+        return;
       }
 
-      setPdfStatus(
-        "AI 분석 생성 중..."
-      );
+      if (!partnerSaju) {
+        setError(
+          "궁합 분석을 위해 상대방 사주 원국을 먼저 계산해주세요."
+        );
+        return;
+      }
+    }
 
+    setAnalyzing(true);
+
+    try {
       const response = await fetch(
         "/api/test-analysis",
         {
           method: "POST",
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            productId:
-              selectedProduct.id,
-            customer: {
-              birthDate:
-                customer.birthDate,
-              birthTime:
-                customer.birthTime,
-              gender:
-                customer.gender,
-            },
-            fourPillars: pillars,
-            fiveElements: elements,
+            productId,
+            customer,
+            partner: isCompatibility
+              ? partner
+              : undefined,
+            fourPillars:
+              customerSaju.fourPillars,
+            fiveElements:
+              customerSaju.fiveElements,
+
             partnerFourPillars:
-              currentPartnerPillars,
+              isCompatibility
+                ? partnerSaju?.fourPillars
+                : undefined,
+
             partnerFiveElements:
-              currentPartnerElements,
+              isCompatibility
+                ? partnerSaju?.fiveElements
+                : undefined,
           }),
         }
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          data.error ||
-            "AI 분석 생성에 실패했습니다."
+          data?.error ||
+            "AI 분석 중 오류가 발생했습니다."
         );
       }
 
-      if (
-        typeof data.result !==
-          "string" ||
-        !data.result.trim()
-      ) {
+      if (!data.result) {
         throw new Error(
-          "AI 분석 결과가 비어 있습니다."
+          "AI 분석 결과가 없습니다."
         );
       }
 
-      setResult(data.result);
-
-      setPdfStatus(
-        "AI 분석 완료 · PDF 생성 중..."
+      setMessage(
+        "AI 분석이 완료되었습니다. 이제 PDF를 생성할 수 있습니다."
       );
 
-      const pdfResponse =
-        await fetch(
-          "/api/admin-pdf",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body: JSON.stringify({
-              result: data.result,
-              productName:
-                selectedProduct.name,
-              birthDate:
-                customer.birthDate,
-              birthTime:
-                customer.birthTime,
-              gender:
-                customer.gender,
-            }),
-          }
-        );
+      await createPdf(data.result);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "AI 분석 중 오류가 발생했습니다."
+      );
+    } finally {
+      setAnalyzing(false);
+    }
+  }
 
-      if (!pdfResponse.ok) {
-        let pdfError =
-          "PDF 생성에 실패했습니다.";
+  async function createPdf(result: string) {
+    setPdfLoading(true);
+    setError("");
 
-        try {
-          const pdfData =
-            await pdfResponse.json();
-
-          pdfError =
-            pdfData.error ||
-            pdfError;
-        } catch {
-          // 기본 오류 메시지 사용
+    try {
+      const response = await fetch(
+        "/api/admin-pdf",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            result,
+            productName:
+              selectedProduct?.name || "",
+            birthDate: customer.birthDate,
+            birthTime: customer.birthTime,
+            gender: customer.gender,
+          }),
         }
+      );
 
-        throw new Error(pdfError);
-      }
+      if (!response.ok) {
+        const data = await response.json();
 
-      const contentType =
-        pdfResponse.headers.get(
-          "content-type"
-        ) || "";
-
-      if (
-        !contentType.includes(
-          "application/pdf"
-        )
-      ) {
         throw new Error(
-          "PDF 파일 응답을 확인하지 못했습니다."
+          data?.error ||
+            "PDF 생성에 실패했습니다."
         );
       }
 
-      const blob =
-        await pdfResponse.blob();
+      const blob = await response.blob();
 
-      if (blob.size === 0) {
+      if (!blob.size) {
         throw new Error(
           "생성된 PDF 파일이 비어 있습니다."
         );
       }
 
-      const safeProductName =
-        selectedProduct.name
-          .replace(
-            /[\\/:*?"<>|]/g,
-            ""
-          )
-          .trim();
-
-      const fileName =
-        `${safeProductName || "ai-saju"}-result.pdf`;
-
       setPdfBlob(blob);
-      setPdfFileName(fileName);
 
-      setPdfStatus(
-        "AI 분석 완료 · PDF 생성 완료"
+      setMessage(
+        "분석과 PDF 생성이 모두 완료되었습니다."
       );
-    } catch (e) {
+    } catch (err) {
       setError(
-        e instanceof Error
-          ? e.message
-          : "분석 생성 중 오류가 발생했습니다."
+        err instanceof Error
+          ? err.message
+          : "PDF 생성 중 오류가 발생했습니다."
       );
-
-      setPdfStatus("");
     } finally {
-      setLoading(false);
+      setPdfLoading(false);
     }
   }
 
   function downloadPdf() {
     if (!pdfBlob) {
       setError(
-        "먼저 PDF를 생성해주세요."
+        "먼저 AI 분석과 PDF 생성을 완료해주세요."
       );
       return;
     }
@@ -387,1066 +376,610 @@ export default function AdminPage() {
     const url =
       URL.createObjectURL(pdfBlob);
 
-    const link =
+    const a =
       document.createElement("a");
 
-    link.href = url;
-    link.download = pdfFileName;
+    a.href = url;
 
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    const productName =
+      selectedProduct?.name || "사주분석";
 
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 1000);
+    a.download =
+      `${productName}_사주분석.pdf`;
 
-    setPdfStatus(
-      "PDF 저장을 시작했습니다."
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(url);
+
+    setMessage(
+      "PDF 다운로드를 시작했습니다."
     );
   }
 
   async function sharePdf() {
     if (!pdfBlob) {
       setError(
-        "먼저 PDF를 생성해주세요."
+        "먼저 AI 분석과 PDF 생성을 완료해주세요."
       );
       return;
     }
 
     try {
-      const file =
-        new File(
-          [pdfBlob],
-          pdfFileName,
-          {
-            type: "application/pdf",
-          }
-        );
+      const file = new File(
+        [pdfBlob],
+        `${
+          selectedProduct?.name || "사주분석"
+        }_사주분석.pdf`,
+        {
+          type: "application/pdf",
+        }
+      );
 
       if (
-        typeof navigator.share ===
-          "function" &&
-        typeof navigator.canShare ===
-          "function"
-      ) {
-        const shareData = {
+        navigator.share &&
+        navigator.canShare &&
+        navigator.canShare({
           files: [file],
-        };
+        })
+      ) {
+        await navigator.share({
+          title: "AI 사주 분석 결과",
+          text: "AI 사주 분석 결과 PDF입니다.",
+          files: [file],
+        });
 
-        if (
-          navigator.canShare(
-            shareData
-          )
-        ) {
-          await navigator.share({
-            title:
-              "AI 사주 분석 결과",
-            text:
-              "AI 사주 분석 결과 PDF입니다.",
-            files: [file],
-          });
+        setMessage(
+          "PDF 공유가 완료되었습니다."
+        );
 
-          setPdfStatus(
-            "PDF 공유를 완료했습니다."
-          );
-
-          return;
-        }
+        return;
       }
 
       downloadPdf();
-
-      setPdfStatus(
-        "이 기기에서는 PDF 공유를 지원하지 않아 파일 저장으로 전환했습니다."
-      );
-    } catch (e) {
+    } catch (err) {
       if (
-        e instanceof DOMException &&
-        e.name === "AbortError"
+        err instanceof DOMException &&
+        err.name === "AbortError"
       ) {
-        setPdfStatus(
-          "PDF 공유를 취소했습니다."
-        );
         return;
       }
 
       setError(
-        "PDF 공유에 실패했습니다. PDF 저장 버튼을 이용해주세요."
+        "공유 기능을 사용할 수 없어 PDF 다운로드 방식으로 진행합니다."
       );
+
+      downloadPdf();
     }
   }
 
   function resetAll() {
-    setCustomer({
-      birthDate: "",
-      birthTime: "",
-      gender: "남성",
-    });
-
-    setSelectedProduct(null);
-
-    setPartner({
-      birthDate: "",
-      birthTime: "",
-      gender: "여성",
-    });
-
-    setPillars(null);
-    setElements(null);
-    setPartnerPillars(null);
-    setPartnerElements(null);
-
-    setResult("");
+    setCustomer(EMPTY_PERSON);
+    setPartner(EMPTY_PERSON);
+    setCustomerSaju(null);
+    setPartnerSaju(null);
     setPdfBlob(null);
-    setPdfFileName(
-      "ai-saju-result.pdf"
-    );
-    setPdfStatus("");
+    setMessage("");
     setError("");
-    setStep(1);
+    setProductId("free");
   }
 
   return (
-    <>
-      <style jsx>{`
-        * {
-          box-sizing: border-box;
-        }
+    <main className="min-h-screen bg-[#f5f6fa] px-4 py-8 text-[#171b25]">
+      <div className="mx-auto max-w-5xl">
 
-        button,
-        input,
-        select {
-          font: inherit;
-        }
+        {/* 헤더 */}
+        <div className="mb-6">
+          <div className="mb-2 inline-flex rounded-full bg-[#111827] px-4 py-2 text-sm font-semibold text-white">
+            AI SAJU ADMIN
+          </div>
 
-        button {
-          -webkit-tap-highlight-color: transparent;
-        }
+          <h1 className="text-3xl font-bold tracking-tight">
+            사주 분석 관리자
+          </h1>
 
-        .admin-page {
-          min-height: 100vh;
-          background: #f6f7fb;
-          padding: 32px 16px 80px;
-          color: #171717;
-        }
+          <p className="mt-2 text-sm text-gray-500">
+            상품을 선택하고 사주를 계산한 뒤 AI 분석 PDF를 생성합니다.
+          </p>
+        </div>
 
-        .admin-container {
-          width: 100%;
-          max-width: 980px;
-          margin: 0 auto;
-        }
+        {/* 오류 */}
+        {error && (
+          <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-600">
+            {error}
+          </div>
+        )}
 
-        .header {
-          background: #111827;
-          color: #fff;
-          border-radius: 20px;
-          padding: 28px;
-          margin-bottom: 20px;
-        }
+        {/* 완료 메시지 */}
+        {message && !error && (
+          <div className="mb-5 rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-sm font-semibold text-green-700">
+            {message}
+          </div>
+        )}
 
-        .header-title {
-          margin: 8px 0;
-          font-size: 30px;
-        }
-
-        .header-description {
-          margin: 0;
-          opacity: 0.8;
-          line-height: 1.6;
-        }
-
-        .card {
-          background: #fff;
-          border-radius: 18px;
-          padding: 24px;
-          box-shadow:
-            0 5px 20px
-            rgba(0, 0, 0, 0.05);
-          margin-bottom: 20px;
-        }
-
-        .grid {
-          display: grid;
-          grid-template-columns:
-            repeat(
-              auto-fit,
-              minmax(220px, 1fr)
-            );
-          gap: 14px;
-          margin-bottom: 20px;
-        }
-
-        .input {
-          width: 100%;
-          padding: 13px;
-          margin-top: 7px;
-          border: 1px solid #d1d5db;
-          border-radius: 10px;
-          background: #fff;
-          font-size: 16px;
-          min-height: 48px;
-        }
-
-        .button-row {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-
-        .primary-button,
-        .secondary-button,
-        .share-button {
-          border-radius: 11px;
-          padding: 14px 18px;
-          font-weight: 900;
-          cursor: pointer;
-          min-height: 48px;
-        }
-
-        .primary-button {
-          border: 0;
-          background: #111827;
-          color: #fff;
-        }
-
-        .secondary-button {
-          border: 1px solid #d1d5db;
-          background: #fff;
-          color: #111827;
-        }
-
-        .share-button {
-          border: 0;
-          background: #2563eb;
-          color: #fff;
-        }
-
-        .primary-button:disabled,
-        .secondary-button:disabled,
-        .share-button:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-        }
-
-        .pillar-grid {
-          display: grid;
-          grid-template-columns:
-            repeat(4, 1fr);
-          gap: 12px;
-        }
-
-        .element-grid {
-          display: grid;
-          grid-template-columns:
-            repeat(5, 1fr);
-          gap: 12px;
-        }
-
-        .product-grid {
-          display: grid;
-          grid-template-columns:
-            repeat(
-              auto-fit,
-              minmax(240px, 1fr)
-            );
-          gap: 12px;
-        }
-
-        .product-button {
-          text-align: left;
-          background: #fff;
-          border-radius: 14px;
-          padding: 18px;
-          cursor: pointer;
-          border: 1px solid #e5e7eb;
-        }
-
-        .status-box {
-          margin-top: 20px;
-          background: #f0fdf4;
-          border: 1px solid #bbf7d0;
-          color: #166534;
-          border-radius: 14px;
-          padding: 18px;
-          font-weight: 800;
-          line-height: 1.7;
-        }
-
-        .pdf-box {
-          margin-top: 16px;
-          padding: 18px;
-          border-radius: 14px;
-          border: 1px solid #dbeafe;
-          background: #eff6ff;
-        }
-
-        .error {
-          background: #fff1f2;
-          border: 1px solid #fecdd3;
-          color: #be123c;
-          padding: 14px;
-          border-radius: 12px;
-          margin-bottom: 16px;
-          font-weight: 700;
-        }
-
-        @media (max-width: 700px) {
-          .admin-page {
-            padding:
-              12px
-              10px
-              40px;
-          }
-
-          .header {
-            padding: 20px 16px;
-            border-radius: 16px;
-          }
-
-          .header-title {
-            font-size: 23px;
-          }
-
-          .header-description {
-            font-size: 14px;
-          }
-
-          .card {
-            padding: 17px 14px;
-            border-radius: 15px;
-          }
-
-          .pillar-grid {
-            grid-template-columns:
-              repeat(2, 1fr);
-          }
-
-          .element-grid {
-            grid-template-columns:
-              repeat(5, 1fr);
-            gap: 5px;
-          }
-
-          .product-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .button-row {
-            flex-direction: column;
-          }
-
-          .primary-button,
-          .secondary-button,
-          .share-button {
-            width: 100%;
-          }
-
-          .input {
-            min-height: 50px;
-            font-size: 16px;
-          }
-
-          h2 {
-            font-size: 20px !important;
-          }
-        }
-      `}</style>
-
-      <main className="admin-page">
-        <div className="admin-container">
-          <header className="header">
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                letterSpacing: 1,
-              }}
-            >
-              ADMIN
+        {/* 1. 고객 정보 */}
+        <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#111827] text-sm font-bold text-white">
+              1
             </div>
 
-            <h1 className="header-title">
-              사주 관리자 분석실
-            </h1>
+            <h2 className="text-xl font-bold">
+              고객 정보
+            </h2>
+          </div>
 
-            <p className="header-description">
-              고객 정보를 입력하고 상품을
-              선택한 뒤 분석 결과 PDF를
-              생성합니다.
-            </p>
+          <div className="grid gap-4 md:grid-cols-3">
 
-            <div
-              style={{
-                marginTop: 16,
-                display: "inline-block",
-                padding: "7px 12px",
-                borderRadius: 999,
-                background: "#fff",
-                color: "#111827",
-                fontSize: 12,
-                fontWeight: 800,
-              }}
-            >
-              관리자 전용 · PDF 저장/공유
-            </div>
-          </header>
+            <div>
+              <label className="mb-2 block text-sm font-semibold">
+                생년월일
+              </label>
 
-          {error && (
-            <div className="error">
-              {error}
-            </div>
-          )}
-
-          {step === 1 && (
-            <section className="card">
-              <StepTitle
-                number="1"
-                title="고객 기본 정보"
+              <input
+                type="date"
+                value={customer.birthDate}
+                onChange={(e) =>
+                  updateCustomer(
+                    "birthDate",
+                    e.target.value
+                  )
+                }
+                className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none focus:border-black"
               />
+            </div>
 
-              <div className="grid">
-                <label>
-                  생년월일
+            <div>
+              <label className="mb-2 block text-sm font-semibold">
+                출생시간
+              </label>
 
-                  <input
-                    className="input"
-                    type="date"
-                    value={
-                      customer.birthDate
-                    }
-                    onChange={(e) =>
-                      setCustomer({
-                        ...customer,
-                        birthDate:
-                          e.target.value,
-                      })
-                    }
-                  />
-                </label>
+              <input
+                type="time"
+                value={customer.birthTime}
+                onChange={(e) =>
+                  updateCustomer(
+                    "birthTime",
+                    e.target.value
+                  )
+                }
+                className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none focus:border-black"
+              />
+            </div>
 
-                <label>
-                  태어난 시간
+            <div>
+              <label className="mb-2 block text-sm font-semibold">
+                성별
+              </label>
 
-                  <select
-                    className="input"
-                    value={
-                      customer.birthTime
-                    }
-                    onChange={(e) =>
-                      setCustomer({
-                        ...customer,
-                        birthTime:
-                          e.target.value,
-                      })
-                    }
-                  >
-                    <option value="">
-                      시간 선택
-                    </option>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateCustomer(
+                      "gender",
+                      "남성"
+                    )
+                  }
+                  className={`rounded-xl border px-4 py-3 font-semibold ${
+                    customer.gender === "남성"
+                      ? "border-black bg-black text-white"
+                      : "border-gray-200 bg-white"
+                  }`}
+                >
+                  남성
+                </button>
 
-                    {TIME_RANGES.map(
-                      (time) => (
-                        <option
-                          key={time}
-                          value={time}
-                        >
-                          {time}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateCustomer(
+                      "gender",
+                      "여성"
+                    )
+                  }
+                  className={`rounded-xl border px-4 py-3 font-semibold ${
+                    customer.gender === "여성"
+                      ? "border-black bg-black text-white"
+                      : "border-gray-200 bg-white"
+                  }`}
+                >
+                  여성
+                </button>
+              </div>
+            </div>
+          </div>
 
-                <label>
-                  성별
+          <button
+            type="button"
+            onClick={handleCustomerCalculate}
+            disabled={loadingCustomer}
+            className="mt-5 w-full rounded-xl bg-[#111827] px-5 py-3.5 font-bold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loadingCustomer
+              ? "사주 계산 중..."
+              : "본인 사주 계산"}
+          </button>
+        </section>
 
-                  <select
-                    className="input"
-                    value={
-                      customer.gender
-                    }
-                    onChange={(e) =>
-                      setCustomer({
-                        ...customer,
-                        gender:
-                          e.target.value as
-                            | "남성"
-                            | "여성",
-                      })
-                    }
-                  >
-                    <option value="남성">
-                      남성
-                    </option>
-
-                    <option value="여성">
-                      여성
-                    </option>
-                  </select>
-                </label>
+        {/* 고객 원국 */}
+        {customerSaju && (
+          <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#111827] text-sm font-bold text-white">
+                2
               </div>
 
-              <button
-                className="primary-button"
-                onClick={
-                  handleCustomerCalculate
-                }
-                disabled={loading}
-              >
-                {loading
-                  ? "만세력 계산 중..."
-                  : "다음 → 만세력 계산"}
-              </button>
-            </section>
-          )}
+              <h2 className="text-xl font-bold">
+                계산된 사주 원국
+              </h2>
+            </div>
 
-          {step >= 2 &&
-            pillars &&
-            elements && (
-              <section className="card">
-                <StepTitle
-                  number="2"
-                  title="계산된 사주 원국"
+            <FourPillars
+              data={customerSaju.fourPillars}
+            />
+
+            <FiveElements
+              data={customerSaju.fiveElements}
+            />
+          </section>
+        )}
+
+        {/* 궁합 상대방 */}
+        {isCompatibility && (
+          <section className="mb-6 rounded-3xl border-2 border-[#e7d8f0] bg-white p-6 shadow-sm">
+
+            <div className="mb-2 flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#8b4c9d] text-sm font-bold text-white">
+                ♥
+              </div>
+
+              <h2 className="text-xl font-bold">
+                궁합 상대방 정보
+              </h2>
+            </div>
+
+            <p className="mb-5 text-sm text-gray-500">
+              궁합 분석은 두 사람의 사주가 모두 계산되어야 시작할 수 있습니다.
+            </p>
+
+            <div className="grid gap-4 md:grid-cols-3">
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold">
+                  상대방 생년월일
+                </label>
+
+                <input
+                  type="date"
+                  value={partner.birthDate}
+                  onChange={(e) =>
+                    updatePartner(
+                      "birthDate",
+                      e.target.value
+                    )
+                  }
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none focus:border-[#8b4c9d]"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold">
+                  상대방 출생시간
+                </label>
+
+                <input
+                  type="time"
+                  value={partner.birthTime}
+                  onChange={(e) =>
+                    updatePartner(
+                      "birthTime",
+                      e.target.value
+                    )
+                  }
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 outline-none focus:border-[#8b4c9d]"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold">
+                  상대방 성별
+                </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updatePartner(
+                        "gender",
+                        "남성"
+                      )
+                    }
+                    className={`rounded-xl border px-4 py-3 font-semibold ${
+                      partner.gender === "남성"
+                        ? "border-[#8b4c9d] bg-[#8b4c9d] text-white"
+                        : "border-gray-200 bg-white"
+                    }`}
+                  >
+                    남성
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updatePartner(
+                        "gender",
+                        "여성"
+                      )
+                    }
+                    className={`rounded-xl border px-4 py-3 font-semibold ${
+                      partner.gender === "여성"
+                        ? "border-[#8b4c9d] bg-[#8b4c9d] text-white"
+                        : "border-gray-200 bg-white"
+                    }`}
+                  >
+                    여성
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handlePartnerCalculate}
+              disabled={loadingPartner}
+              className="mt-5 w-full rounded-xl bg-[#8b4c9d] px-5 py-3.5 font-bold text-white transition hover:bg-[#713c81] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loadingPartner
+                ? "상대방 사주 계산 중..."
+                : "상대방 사주 계산"}
+            </button>
+
+            {partnerSaju && (
+              <div className="mt-6 border-t border-gray-100 pt-6">
+                <div className="mb-4 text-sm font-bold text-[#8b4c9d]">
+                  ✓ 상대방 사주 계산 완료
+                </div>
+
+                <FourPillars
+                  data={partnerSaju.fourPillars}
                 />
 
-                <div className="pillar-grid">
-                  <InfoBox
-                    title="년주"
-                    value={pillars.year}
-                  />
-
-                  <InfoBox
-                    title="월주"
-                    value={pillars.month}
-                  />
-
-                  <InfoBox
-                    title="일주"
-                    value={pillars.day}
-                  />
-
-                  <InfoBox
-                    title="시주"
-                    value={pillars.time}
-                  />
-                </div>
-
-                <div
-                  style={{
-                    marginTop: 18,
-                  }}
-                >
-                  <strong>
-                    오행
-                  </strong>
-
-                  <div
-                    className="element-grid"
-                    style={{
-                      marginTop: 10,
-                    }}
-                  >
-                    <InfoBox
-                      title="木"
-                      value={`${elements.wood}`}
-                    />
-
-                    <InfoBox
-                      title="火"
-                      value={`${elements.fire}`}
-                    />
-
-                    <InfoBox
-                      title="土"
-                      value={`${elements.earth}`}
-                    />
-
-                    <InfoBox
-                      title="金"
-                      value={`${elements.metal}`}
-                    />
-
-                    <InfoBox
-                      title="水"
-                      value={`${elements.water}`}
-                    />
-                  </div>
-                </div>
-
-                {step === 2 && (
-                  <div
-                    style={{
-                      marginTop: 22,
-                    }}
-                  >
-                    <h2
-                      style={{
-                        fontSize: 20,
-                        marginBottom: 12,
-                      }}
-                    >
-                      3. 분석 상품 선택
-                    </h2>
-
-                    <div className="product-grid">
-                      {ADMIN_PRODUCTS.map(
-                        (product) => (
-                          <button
-                            key={
-                              product.id
-                            }
-                            type="button"
-                            onClick={() =>
-                              handleProductSelect(
-                                product
-                              )
-                            }
-                            className="product-button"
-                            style={{
-                              border:
-                                selectedProduct?.id ===
-                                product.id
-                                  ? "2px solid #111827"
-                                  : "1px solid #e5e7eb",
-                            }}
-                          >
-                            <div
-                              style={{
-                                fontSize: 18,
-                                fontWeight: 900,
-                              }}
-                            >
-                              {
-                                product.name
-                              }
-                            </div>
-
-                            <div
-                              style={{
-                                fontSize: 22,
-                                fontWeight: 900,
-                                margin:
-                                  "8px 0",
-                              }}
-                            >
-                              {formatPrice(
-                                product.price
-                              )}
-                            </div>
-
-                            <div
-                              style={{
-                                fontSize: 13,
-                                color:
-                                  "#6b7280",
-                                lineHeight:
-                                  1.5,
-                              }}
-                            >
-                              {
-                                product.description
-                              }
-                            </div>
-                          </button>
-                        )
-                      )}
-                    </div>
-                  </div>
-                )}
-              </section>
+                <FiveElements
+                  data={partnerSaju.fiveElements}
+                />
+              </div>
             )}
+          </section>
+        )}
 
-          {step === 3 &&
-            selectedProduct && (
-              <section className="card">
-                <StepTitle
-                  number="3"
-                  title="선택 상품 분석"
-                />
+        {/* 상품 선택 */}
+        <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#111827] text-sm font-bold text-white">
+              {isCompatibility ? "4" : "3"}
+            </div>
 
-                <div
-                  style={{
-                    padding: 18,
-                    borderRadius: 14,
-                    background:
-                      "#f3f4f6",
-                    marginBottom: 18,
-                  }}
+            <h2 className="text-xl font-bold">
+              선택 상품 분석
+            </h2>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {ADMIN_PRODUCTS.map((product) => {
+              const selected =
+                product.id === productId;
+
+              return (
+                <button
+                  key={product.id}
+                  type="button"
+                  onClick={() =>
+                    handleProductChange(
+                      product.id
+                    )
+                  }
+                  className={`rounded-2xl border p-5 text-left transition ${
+                    selected
+                      ? "border-[#111827] bg-[#f3f4f6] shadow-sm"
+                      : "border-gray-200 bg-white hover:border-gray-400"
+                  }`}
                 >
-                  <div
-                    style={{
-                      fontWeight: 900,
-                      fontSize: 20,
-                    }}
-                  >
-                    {
-                      selectedProduct.name
-                    }
-                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-lg font-bold">
+                        {product.name}
+                      </div>
 
-                  <div
-                    style={{
-                      fontWeight: 800,
-                      marginTop: 4,
-                    }}
-                  >
-                    {formatPrice(
-                      selectedProduct.price
-                    )}
-                  </div>
+                      <div className="mt-1 text-sm font-bold">
+                        {product.price.toLocaleString()}
+                        원
+                      </div>
 
-                  <div
-                    style={{
-                      color: "#6b7280",
-                      marginTop: 6,
-                    }}
-                  >
-                    {
-                      selectedProduct.description
-                    }
-                  </div>
-                </div>
-
-                {selectedProduct.id ===
-                  "compatibility" && (
-                  <div
-                    style={{
-                      padding: 18,
-                      border:
-                        "1px solid #e5e7eb",
-                      borderRadius: 14,
-                      marginBottom: 18,
-                    }}
-                  >
-                    <h3
-                      style={{
-                        marginTop: 0,
-                      }}
-                    >
-                      상대방 정보
-                    </h3>
-
-                    <div className="grid">
-                      <label>
-                        상대방 생년월일
-
-                        <input
-                          className="input"
-                          type="date"
-                          value={
-                            partner.birthDate
-                          }
-                          onChange={(e) =>
-                            setPartner({
-                              ...partner,
-                              birthDate:
-                                e.target
-                                  .value,
-                            })
-                          }
-                        />
-                      </label>
-
-                      <label>
-                        상대방 태어난 시간
-
-                        <select
-                          className="input"
-                          value={
-                            partner.birthTime
-                          }
-                          onChange={(e) =>
-                            setPartner({
-                              ...partner,
-                              birthTime:
-                                e.target
-                                  .value,
-                            })
-                          }
-                        >
-                          <option value="">
-                            시간 선택
-                          </option>
-
-                          {TIME_RANGES.map(
-                            (time) => (
-                              <option
-                                key={time}
-                                value={
-                                  time
-                                }
-                              >
-                                {time}
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </label>
-
-                      <label>
-                        상대방 성별
-
-                        <select
-                          className="input"
-                          value={
-                            partner.gender
-                          }
-                          onChange={(e) =>
-                            setPartner({
-                              ...partner,
-                              gender:
-                                e.target
-                                  .value as
-                                  | "남성"
-                                  | "여성",
-                            })
-                          }
-                        >
-                          <option value="남성">
-                            남성
-                          </option>
-
-                          <option value="여성">
-                            여성
-                          </option>
-                        </select>
-                      </label>
-                    </div>
-                  </div>
-                )}
-
-                <div className="button-row">
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() => {
-                      setStep(2);
-                      setResult("");
-                      setPdfBlob(null);
-                      setPdfStatus("");
-                      setError("");
-                    }}
-                  >
-                    상품 다시 선택
-                  </button>
-
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={
-                      generateResult
-                    }
-                    disabled={loading}
-                  >
-                    {loading
-                      ? "분석 생성 중..."
-                      : "AI 분석 + PDF 생성"}
-                  </button>
-
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={resetAll}
-                  >
-                    처음부터
-                  </button>
-                </div>
-
-                {result && (
-                  <div
-                    style={{
-                      marginTop: 24,
-                      borderTop:
-                        "1px solid #e5e7eb",
-                      paddingTop: 24,
-                    }}
-                  >
-                    <h2
-                      style={{
-                        fontSize: 22,
-                      }}
-                    >
-                      처리 상태
-                    </h2>
-
-                    <div className="status-box">
-                      {pdfStatus ||
-                        "AI 분석이 완료되었습니다."}
+                      <div className="mt-2 text-sm leading-6 text-gray-500">
+                        {product.description}
+                      </div>
                     </div>
 
-                    {pdfBlob && (
-                      <div className="pdf-box">
-                        <div
-                          style={{
-                            fontWeight: 900,
-                            fontSize: 17,
-                          }}
-                        >
-                          PDF 준비 완료
-                        </div>
-
-                        <div
-                          style={{
-                            marginTop: 6,
-                            color:
-                              "#6b7280",
-                            fontSize: 13,
-                            wordBreak:
-                              "break-all",
-                          }}
-                        >
-                          {
-                            pdfFileName
-                          }
-                        </div>
-
-                        <div
-                          className="button-row"
-                          style={{
-                            marginTop: 14,
-                          }}
-                        >
-                          <button
-                            type="button"
-                            className="primary-button"
-                            onClick={
-                              downloadPdf
-                            }
-                          >
-                            📥 PDF 저장
-                          </button>
-
-                          <button
-                            type="button"
-                            className="share-button"
-                            onClick={
-                              sharePdf
-                            }
-                          >
-                            📤 PDF 공유
-                          </button>
-                        </div>
-
-                        <p
-                          style={{
-                            margin:
-                              "12px 0 0",
-                            color:
-                              "#6b7280",
-                            fontSize: 13,
-                            lineHeight:
-                              1.6,
-                          }}
-                        >
-                          모바일에서는
-                          <strong>
-                            PDF 공유
-                          </strong>
-                          를 누르면 휴대폰의
-                          기본 공유 화면에서
-                          카카오톡, 메일,
-                          파일 앱 등을
-                          선택할 수 있습니다.
-                        </p>
+                    {selected && (
+                      <div className="rounded-full bg-[#111827] px-3 py-1 text-xs font-bold text-white">
+                        선택
                       </div>
                     )}
-
-                    <p
-                      style={{
-                        margin:
-                          "12px 0 0",
-                        color:
-                          "#6b7280",
-                        fontSize: 13,
-                      }}
-                    >
-                      분석 전문은 관리자
-                      화면에 표시하지 않고
-                      PDF 파일로 처리합니다.
-                    </p>
                   </div>
-                )}
-              </section>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 분석 실행 */}
+        <section className="mb-6 rounded-3xl bg-white p-6 shadow-sm">
+          <div className="rounded-2xl bg-gradient-to-r from-[#111827] to-[#252b3a] p-6 text-white">
+
+            <div className="text-sm font-semibold text-gray-300">
+              현재 선택 상품
+            </div>
+
+            <div className="mt-1 text-2xl font-bold">
+              {selectedProduct?.name}
+            </div>
+
+            <div className="mt-1 text-sm text-gray-300">
+              {selectedProduct?.description}
+            </div>
+
+            {isCompatibility && (
+              <div className="mt-4 rounded-xl bg-white/10 px-4 py-3 text-sm">
+                {partnerSaju
+                  ? "✓ 본인 + 상대방 사주 계산 완료"
+                  : "○ 상대방 사주 계산이 필요합니다."}
+              </div>
             )}
-        </div>
-      </main>
-    </>
-  );
-}
 
-function StepTitle({
-  number,
-  title,
-}: {
-  number: string;
-  title: string;
-}) {
-  return (
-    <h2
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        marginTop: 0,
-      }}
-    >
-      <span
-        style={{
-          width: 32,
-          height: 32,
-          flexShrink: 0,
-          borderRadius: "50%",
-          background: "#111827",
-          color: "#fff",
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 14,
-        }}
-      >
-        {number}
-      </span>
+            <button
+              type="button"
+              onClick={handleAnalysis}
+              disabled={
+                analyzing ||
+                pdfLoading ||
+                !customerSaju ||
+                (isCompatibility &&
+                  !partnerSaju)
+              }
+              className="mt-5 w-full rounded-xl bg-white px-5 py-4 font-bold text-[#111827] transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {analyzing
+                ? "AI 분석 중..."
+                : pdfLoading
+                ? "PDF 생성 중..."
+                : isCompatibility &&
+                  !partnerSaju
+                ? "상대방 사주를 먼저 계산해주세요"
+                : "AI 분석 시작"}
+            </button>
+          </div>
+        </section>
 
-      {title}
-    </h2>
-  );
-}
+        {/* PDF */}
+        {pdfBlob && (
+          <section className="mb-6 rounded-3xl border border-green-200 bg-white p-6 shadow-sm">
+            <div className="rounded-2xl bg-green-50 p-5">
+              <div className="text-lg font-bold text-green-700">
+                ✓ 분석 및 PDF 생성 완료
+              </div>
 
-function InfoBox({
-  title,
-  value,
-}: {
-  title: string;
-  value: string;
-}) {
-  return (
-    <div
-      style={{
-        background: "#f9fafb",
-        border: "1px solid #e5e7eb",
-        borderRadius: 12,
-        padding: 14,
-        textAlign: "center",
-      }}
-    >
-      <div
-        style={{
-          color: "#6b7280",
-          fontSize: 12,
-        }}
-      >
-        {title}
+              <p className="mt-1 text-sm text-green-600">
+                PDF 파일을 PC에서 다운로드하거나 모바일에서 바로 공유할 수 있습니다.
+              </p>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <button
+                type="button"
+                onClick={downloadPdf}
+                className="rounded-xl bg-[#111827] px-5 py-4 font-bold text-white"
+              >
+                PDF 다운로드
+              </button>
+
+              <button
+                type="button"
+                onClick={sharePdf}
+                className="rounded-xl bg-[#8b4c9d] px-5 py-4 font-bold text-white"
+              >
+                PDF 공유하기
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* 초기화 */}
+        <button
+          type="button"
+          onClick={resetAll}
+          className="mb-10 w-full rounded-xl border border-gray-200 bg-white px-5 py-3 font-semibold text-gray-600 hover:bg-gray-50"
+        >
+          처음부터 다시 작성
+        </button>
       </div>
+    </main>
+  );
+}
 
-      <div
-        style={{
-          fontSize: 20,
-          fontWeight: 900,
-          marginTop: 4,
-        }}
-      >
-        {value}
+function FourPillars({
+  data,
+}: {
+  data: unknown;
+}) {
+  const value =
+    data as Record<string, unknown> | null;
+
+  const items = [
+    ["년주", value?.year],
+    ["월주", value?.month],
+    ["일주", value?.day],
+    ["시주", value?.time],
+  ];
+
+  return (
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      {items.map(([label, item]) => (
+        <div
+          key={label}
+          className="rounded-2xl border border-gray-200 bg-[#fafafa] p-5 text-center"
+        >
+          <div className="text-sm text-gray-500">
+            {label}
+          </div>
+
+          <div className="mt-3 text-2xl font-bold">
+            {String(item ?? "-")}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FiveElements({
+  data,
+}: {
+  data: unknown;
+}) {
+  const value =
+    data as Record<string, unknown> | null;
+
+  const items = [
+    ["木", value?.wood],
+    ["火", value?.fire],
+    ["土", value?.earth],
+    ["金", value?.metal],
+    ["水", value?.water],
+  ];
+
+  return (
+    <div className="mt-6">
+      <h3 className="mb-3 text-lg font-bold">
+        오행
+      </h3>
+
+      <div className="grid grid-cols-5 gap-2">
+        {items.map(([label, item]) => (
+          <div
+            key={label}
+            className="rounded-2xl border border-gray-200 bg-[#fafafa] p-4 text-center"
+          >
+            <div className="text-sm text-gray-500">
+              {label}
+            </div>
+
+            <div className="mt-2 text-xl font-bold">
+              {String(item ?? 0)}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
