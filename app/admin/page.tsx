@@ -581,6 +581,18 @@ function InfoBox({ title, value }: { title: string; value: string }) {
   );
 }
 
+const pillarGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(4, 1fr)",
+  gap: 12,
+};
+
+const elementGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(5, 1fr)",
+  gap: 12,
+};
+
 const cardStyle = {
   background: "#fff",
   borderRadius: 18,
