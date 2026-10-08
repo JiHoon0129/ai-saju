@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     // 태어난 시간 분리
     const [hour, minute] = birthTime.split(":").map(Number);
 
-if (
+    if (
   !Number.isInteger(year) ||
   !Number.isInteger(month) ||
   !Number.isInteger(day) ||
@@ -43,7 +43,8 @@ if (
     { error: "생년월일 또는 태어난 시간 형식이 올바르지 않습니다." },
     { status: 400 }
   );
-} {
+}
+  {
       return NextResponse.json(
         { error: "생년월일 또는 태어난 시간 형식이 올바르지 않습니다." },
         { status: 400 }
