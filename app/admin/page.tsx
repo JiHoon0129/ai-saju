@@ -1,16 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { PRODUCTS, type ProductId } from "../../lib/products";
+import { useState } from "react";
+import type { AdminProduct } from "../../lib/admin-products";
+import { ADMIN_PRODUCTS } from "../../lib/admin-products";
 
-type Gender = "남성" | "여성" | "";
-type Pillars = {
+type FourPillars = {
   year: string;
   month: string;
   day: string;
   time: string;
 };
-type Elements = {
+
+type FiveElements = {
   wood: number;
   fire: number;
   earth: number;
@@ -18,462 +19,521 @@ type Elements = {
   water: number;
 };
 
+type PersonData = {
+  email: string;
+  birthDate: string;
+  birthTime: string;
+  gender: "남성" | "여성";
+  fourPillars?: FourPillars;
+  fiveElements?: FiveElements;
+};
+
 const TIME_RANGES = [
-  "00:00~01:30",
-  "01:30~03:00",
-  "03:00~04:30",
-  "04:30~06:00",
-  "06:00~07:30",
-  "07:30~09:00",
-  "09:00~10:30",
-  "10:30~12:00",
-  "12:00~13:30",
-  "13:30~15:00",
-  "15:00~16:30",
-  "16:30~18:00",
-  "18:00~19:30",
-  "19:30~21:00",
-  "21:00~22:30",
+  "00:00~01:30", "01:30~03:30", "03:30~05:30", "05:30~07:30",
+  "07:30~09:30", "09:30~11:30", "11:30~13:30", "13:30~15:30",
+  "15:30~17:30", "17:30~19:30", "19:30~21:30", "21:30~22:30",
   "22:30~00:00",
 ];
 
-async function readJson(response: Response) {
-  const raw = await response.text();
-  if (!raw.trim()) return {};
-  try {
-    return JSON.parse(raw);
-  } catch {
-    throw new Error(`서버 응답을 읽을 수 없습니다. (${response.status})`);
-  }
-}
-
-const emptyPillars: Pillars = {
-  year: "",
-  month: "",
-  day: "",
-  time: "",
-};
-
-const emptyElements: Elements = {
-  wood: 0,
-  fire: 0,
-  earth: 0,
-  metal: 0,
-  water: 0,
-};
+const formatPrice = (price: number) =>
+  price === 0 ? "무료" : `${price.toLocaleString("ko-KR")}원`;
 
 export default function AdminPage() {
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [customer, setCustomer] = useState<PersonData>({
+    email: "",
+    birthDate: "",
+    birthTime: "",
+    gender: "남성",
+  });
 
-  const [email, setEmail] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [birthTime, setBirthTime] = useState("");
-  const [gender, setGender] = useState<Gender>("");
+  const [selectedProduct, setSelectedProduct] = useState<AdminProduct | null>(null);
+  const [partner, setPartner] = useState<PersonData>({
+    email: "",
+    birthDate: "",
+    birthTime: "",
+    gender: "여성",
+  });
 
-  const [partnerBirthDate, setPartnerBirthDate] = useState("");
-  const [partnerBirthTime, setPartnerBirthTime] = useState("");
-  const [partnerGender, setPartnerGender] = useState<Gender>("");
-
-  const [selectedProduct, setSelectedProduct] = useState<ProductId>("detail");
-
-  const [fourPillars, setFourPillars] = useState<Pillars>(emptyPillars);
-  const [fiveElements, setFiveElements] = useState<Elements>(emptyElements);
-  const [partnerFourPillars, setPartnerFourPillars] =
-    useState<Pillars>(emptyPillars);
-  const [partnerFiveElements, setPartnerFiveElements] =
-    useState<Elements>(emptyElements);
-
-  const [basicAnalysis, setBasicAnalysis] = useState("");
   const [result, setResult] = useState("");
+  const [pillars, setPillars] = useState<FourPillars | null>(null);
+  const [elements, setElements] = useState<FiveElements | null>(null);
+  const [partnerPillars, setPartnerPillars] = useState<FourPillars | null>(null);
+  const [partnerElements, setPartnerElements] = useState<FiveElements | null>(null);
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [error, setError] = useState("");
 
-  const product = useMemo(
-    () => PRODUCTS.find((item) => item.id === selectedProduct)!,
-    [selectedProduct]
-  );
+  async function calculatePerson(person: PersonData) {
+    const response = await fetch("/api/admin-saju", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        birthDate: person.birthDate,
+        birthTime: person.birthTime,
+        gender: person.gender,
+      }),
+    });
 
-  const resetAll = () => {
-    setStep(1);
-    setEmail("");
-    setBirthDate("");
-    setBirthTime("");
-    setGender("");
-    setPartnerBirthDate("");
-    setPartnerBirthTime("");
-    setPartnerGender("");
-    setSelectedProduct("detail");
-    setFourPillars(emptyPillars);
-    setFiveElements(emptyElements);
-    setPartnerFourPillars(emptyPillars);
-    setPartnerFiveElements(emptyElements);
-    setBasicAnalysis("");
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "만세력 계산에 실패했습니다.");
+    }
+
+    return data as {
+      fourPillars: FourPillars;
+      fiveElements: FiveElements;
+    };
+  }
+
+  async function handleCustomerCalculate() {
+    setError("");
     setResult("");
-    setError("");
-  };
 
-  const calculatePillars = async () => {
-    setError("");
-
-    if (!email.trim()) return setError("고객 이메일을 입력해주세요.");
-    if (!birthDate) return setError("생년월일을 입력해주세요.");
-    if (!birthTime) return setError("출생 시간대를 선택해주세요.");
-    if (!gender) return setError("성별을 선택해주세요.");
+    if (!customer.email || !customer.birthDate || !customer.birthTime) {
+      setError("고객 이메일, 생년월일, 태어난 시간을 모두 입력해주세요.");
+      return;
+    }
 
     setLoading(true);
 
     try {
-      const response = await fetch("/api/saju", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          birthDate,
-          birthTime: birthTime.split("~")[0],
-          gender,
-        }),
-      });
-
-      const data = await readJson(response);
-
-      if (!response.ok) {
-        throw new Error(data.error || "만세력 계산에 실패했습니다.");
-      }
-
-      if (!data.fourPillars || !data.fiveElements) {
-        throw new Error("만세력 결과가 올바르지 않습니다.");
-      }
-
-      setFourPillars(data.fourPillars);
-      setFiveElements(data.fiveElements);
-      setBasicAnalysis(data.result || "");
-
-      if (selectedProduct === "compatibility") {
-        if (!partnerBirthDate || !partnerBirthTime || !partnerGender) {
-          throw new Error("궁합 분석은 상대방 정보를 모두 입력해주세요.");
-        }
-
-        const partnerResponse = await fetch("/api/saju", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            birthDate: partnerBirthDate,
-            birthTime: partnerBirthTime.split("~")[0],
-            gender: partnerGender,
-          }),
-        });
-
-        const partnerData = await readJson(partnerResponse);
-
-        if (!partnerResponse.ok) {
-          throw new Error(
-            partnerData.error || "상대방 만세력 계산에 실패했습니다."
-          );
-        }
-
-        if (!partnerData.fourPillars || !partnerData.fiveElements) {
-          throw new Error("상대방 만세력 결과가 올바르지 않습니다.");
-        }
-
-        setPartnerFourPillars(partnerData.fourPillars);
-        setPartnerFiveElements(partnerData.fiveElements);
-      }
-
+      const data = await calculatePerson(customer);
+      setPillars(data.fourPillars);
+      setElements(data.fiveElements);
       setStep(2);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "만세력 계산 중 오류가 발생했습니다.");
+      setError(e instanceof Error ? e.message : "계산 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const generateResult = async () => {
+  async function handleProductSelect(product: AdminProduct) {
     setError("");
+    setResult("");
+    setSelectedProduct(product);
+
+    if (product.id !== "compatibility") {
+      setStep(3);
+      return;
+    }
+
+    setStep(3);
+  }
+
+  async function generateResult() {
+    if (!selectedProduct || !pillars || !elements) {
+      setError("상품과 기본 사주 정보가 필요합니다.");
+      return;
+    }
+
+    setError("");
+    setResult("");
     setLoading(true);
 
     try {
+      let currentPartnerPillars = partnerPillars;
+      let currentPartnerElements = partnerElements;
+
+      if (selectedProduct.id === "compatibility") {
+        if (!partner.birthDate || !partner.birthTime) {
+          throw new Error("궁합 분석은 상대방 생년월일과 태어난 시간을 입력해주세요.");
+        }
+
+        const partnerData = await calculatePerson(partner);
+        currentPartnerPillars = partnerData.fourPillars;
+        currentPartnerElements = partnerData.fiveElements;
+        setPartnerPillars(currentPartnerPillars);
+        setPartnerElements(currentPartnerElements);
+      }
+
       const response = await fetch("/api/test-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          productId: selectedProduct,
-          email,
-          birthDate,
-          birthTime,
-          gender,
-          fourPillars,
-          fiveElements,
-          partnerBirthDate,
-          partnerBirthTime,
-          partnerGender,
-          partnerFourPillars,
-          partnerFiveElements,
+          productId: selectedProduct.id,
+          customer: {
+            birthDate: customer.birthDate,
+            birthTime: customer.birthTime,
+            gender: customer.gender,
+          },
+          fourPillars: pillars,
+          fiveElements: elements,
+          partnerFourPillars: currentPartnerPillars,
+          partnerFiveElements: currentPartnerElements,
         }),
       });
 
-      const data = await readJson(response);
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "분석 생성에 실패했습니다.");
-      }
-
-      if (!data.result?.trim()) {
-        throw new Error("분석 결과가 비어 있습니다.");
+        throw new Error(data.error || "AI 분석 생성에 실패했습니다.");
       }
 
       setResult(data.result);
-      setStep(4);
     } catch (e) {
       setError(e instanceof Error ? e.message : "분석 생성 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const copyResult = async () => {
-    try {
-      await navigator.clipboard.writeText(result);
-      alert("결과를 복사했습니다.");
-    } catch {
-      alert("복사에 실패했습니다.");
-    }
-  };
-
-  const elementItems = [
-    ["목(木)", fiveElements.wood],
-    ["화(火)", fiveElements.fire],
-    ["토(土)", fiveElements.earth],
-    ["금(金)", fiveElements.metal],
-    ["수(水)", fiveElements.water],
-  ];
+  function resetAll() {
+    setCustomer({
+      email: "",
+      birthDate: "",
+      birthTime: "",
+      gender: "남성",
+    });
+    setSelectedProduct(null);
+    setPartner({
+      email: "",
+      birthDate: "",
+      birthTime: "",
+      gender: "여성",
+    });
+    setPillars(null);
+    setElements(null);
+    setPartnerPillars(null);
+    setPartnerElements(null);
+    setResult("");
+    setError("");
+    setStep(1);
+  }
 
   return (
-    <main className="min-h-screen bg-[#070b13] px-4 py-8 text-white sm:px-6">
-      <div className="mx-auto max-w-5xl">
-        <header className="mb-8 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold tracking-[0.22em] text-[#d8b46a]">
-              AI SAJU ADMIN
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold">사주 분석 관리자</h1>
+    <main
+      style={{
+        minHeight: "100vh",
+        background: "#f6f7fb",
+        padding: "32px 16px 80px",
+        color: "#171717",
+      }}
+    >
+      <div style={{ maxWidth: 980, margin: "0 auto" }}>
+        <header
+          style={{
+            background: "#111827",
+            color: "#fff",
+            borderRadius: 20,
+            padding: 28,
+            marginBottom: 20,
+          }}
+        >
+          <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1 }}>
+            ADMIN TEST MODE
           </div>
-          <span className="rounded-full border border-amber-300/20 bg-amber-300/5 px-3 py-2 text-xs text-amber-100/70">
-            TEST MODE
-          </span>
+          <h1 style={{ margin: "8px 0", fontSize: 30 }}>사주 관리자 분석실</h1>
+          <p style={{ margin: 0, opacity: 0.8 }}>
+            고객 정보를 입력하고 상품을 선택한 뒤 해당 상품의 테스트 결과만 생성합니다.
+          </p>
+          <div
+            style={{
+              marginTop: 16,
+              display: "inline-block",
+              padding: "7px 12px",
+              borderRadius: 999,
+              background: "#fff",
+              color: "#111827",
+              fontSize: 12,
+              fontWeight: 800,
+            }}
+          >
+            토스 결제 없음 · 관리자 테스트 전용
+          </div>
         </header>
 
-        <div className="mb-6 grid grid-cols-4 gap-2">
-          {["고객정보", "만세력", "상품선택", "분석결과"].map((label, index) => (
-            <div
-              key={label}
-              className={`rounded-xl border p-3 text-center text-xs ${
-                step === index + 1
-                  ? "border-[#d8b46a]/60 bg-[#d8b46a]/10 text-[#f0d18a]"
-                  : "border-white/10 bg-white/[0.025] text-white/35"
-              }`}
-            >
-              <span className="block text-[10px] opacity-60">0{index + 1}</span>
-              {label}
-            </div>
-          ))}
-        </div>
-
         {error && (
-          <div className="mb-5 rounded-2xl border border-red-400/20 bg-red-400/[0.06] p-4 text-sm text-red-100">
+          <div
+            style={{
+              background: "#fff1f2",
+              border: "1px solid #fecdd3",
+              color: "#be123c",
+              padding: 14,
+              borderRadius: 12,
+              marginBottom: 16,
+              fontWeight: 700,
+            }}
+          >
             {error}
           </div>
         )}
 
         {step === 1 && (
-          <section className="rounded-[28px] border border-white/10 bg-white/[0.035] p-6 sm:p-8">
-            <h2 className="text-xl font-semibold">고객 정보 입력</h2>
-            <p className="mt-2 text-sm text-white/40">
-              고객 정보를 입력하고 기존 사주 계산 API로 만세력을 확인합니다.
-            </p>
+          <section style={cardStyle}>
+            <StepTitle number="1" title="고객 기본 정보" />
+            <div style={gridStyle}>
+              <label>
+                고객 이메일
+                <input
+                  style={inputStyle}
+                  type="email"
+                  value={customer.email}
+                  onChange={(e) =>
+                    setCustomer({ ...customer, email: e.target.value })
+                  }
+                  placeholder="customer@example.com"
+                />
+              </label>
 
-            <div className="mt-7 grid gap-4 sm:grid-cols-2">
-              <Field label="고객 이메일">
-                <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="customer@example.com" className={inputClass} />
-              </Field>
+              <label>
+                생년월일
+                <input
+                  style={inputStyle}
+                  type="date"
+                  value={customer.birthDate}
+                  onChange={(e) =>
+                    setCustomer({ ...customer, birthDate: e.target.value })
+                  }
+                />
+              </label>
 
-              <Field label="생년월일">
-                <input value={birthDate} onChange={(e) => setBirthDate(e.target.value)} type="date" className={inputClass} style={{ colorScheme: "dark" }} />
-              </Field>
-
-              <Field label="출생 시간대">
-                <select value={birthTime} onChange={(e) => setBirthTime(e.target.value)} className={inputClass}>
-                  <option value="">시간대를 선택해주세요</option>
-                  {TIME_RANGES.map((time) => <option key={time} value={time}>{time}</option>)}
-                </select>
-              </Field>
-
-              <Field label="성별">
-                <div className="grid grid-cols-2 gap-2">
-                  {(["남성", "여성"] as const).map((item) => (
-                    <button key={item} onClick={() => setGender(item)} className={gender === item ? selectedButtonClass : buttonClass}>
-                      {item}
-                    </button>
+              <label>
+                태어난 시간
+                <select
+                  style={inputStyle}
+                  value={customer.birthTime}
+                  onChange={(e) =>
+                    setCustomer({ ...customer, birthTime: e.target.value })
+                  }
+                >
+                  <option value="">시간 선택</option>
+                  {TIME_RANGES.map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
                   ))}
-                </div>
-              </Field>
+                </select>
+              </label>
+
+              <label>
+                성별
+                <select
+                  style={inputStyle}
+                  value={customer.gender}
+                  onChange={(e) =>
+                    setCustomer({
+                      ...customer,
+                      gender: e.target.value as "남성" | "여성",
+                    })
+                  }
+                >
+                  <option value="남성">남성</option>
+                  <option value="여성">여성</option>
+                </select>
+              </label>
             </div>
 
-            <button onClick={calculatePillars} disabled={loading} className={primaryButton}>
-              {loading ? "만세력을 계산하고 있습니다..." : "만세력 확인하기 →"}
+            <button style={primaryButton} onClick={handleCustomerCalculate} disabled={loading}>
+              {loading ? "만세력 계산 중..." : "다음 → 만세력 계산"}
             </button>
           </section>
         )}
 
-        {step === 2 && (
-          <section className="space-y-5">
-            <section className="rounded-[28px] border border-[#d8b46a]/25 bg-white/[0.035] p-6 sm:p-8">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs tracking-[0.2em] text-[#d8b46a]">FOUR PILLARS</p>
-                  <h2 className="mt-2 text-xl font-semibold">만세력 확인</h2>
+        {step >= 2 && pillars && elements && (
+          <section style={cardStyle}>
+            <StepTitle number="2" title="계산된 사주 원국" />
+            <div style={pillarGrid}>
+              <InfoBox title="년주" value={pillars.year} />
+              <InfoBox title="월주" value={pillars.month} />
+              <InfoBox title="일주" value={pillars.day} />
+              <InfoBox title="시주" value={pillars.time} />
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <strong>오행</strong>
+              <div style={elementGrid}>
+                <InfoBox title="木" value={`${elements.wood}`} />
+                <InfoBox title="火" value={`${elements.fire}`} />
+                <InfoBox title="土" value={`${elements.earth}`} />
+                <InfoBox title="金" value={`${elements.metal}`} />
+                <InfoBox title="水" value={`${elements.water}`} />
+              </div>
+            </div>
+
+            {step === 2 && (
+              <div style={{ marginTop: 20 }}>
+                <h2 style={{ fontSize: 20, marginBottom: 12 }}>
+                  3. 분석 상품 선택
+                </h2>
+
+                <div style={productGrid}>
+                  {ADMIN_PRODUCTS.map((product) => (
+                    <button
+                      key={product.id}
+                      onClick={() => handleProductSelect(product)}
+                      style={{
+                        ...productButton,
+                        border:
+                          selectedProduct?.id === product.id
+                            ? "2px solid #111827"
+                            : "1px solid #e5e7eb",
+                      }}
+                    >
+                      <div style={{ fontSize: 18, fontWeight: 900 }}>
+                        {product.name}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 22,
+                          fontWeight: 900,
+                          margin: "8px 0",
+                        }}
+                      >
+                        {formatPrice(product.price)}
+                      </div>
+                      <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
+                        {product.description}
+                      </div>
+                    </button>
+                  ))}
                 </div>
-                <span className="rounded-full border border-emerald-400/20 bg-emerald-400/5 px-3 py-1 text-xs text-emerald-200">계산 완료</span>
               </div>
-
-              <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {[
-                  ["년주", fourPillars.year],
-                  ["월주", fourPillars.month],
-                  ["일주", fourPillars.day],
-                  ["시주", fourPillars.time],
-                ].map(([label, value]) => (
-                  <div key={label} className="rounded-2xl border border-white/10 bg-[#0a1019] p-5 text-center">
-                    <p className="text-xs text-white/35">{label}</p>
-                    <p className="mt-3 text-lg font-bold text-[#f0d18a]">{value || "-"}</p>
-                  </div>
-                ))}
-              </div>
-
-              <h3 className="mt-7 text-sm font-semibold text-[#ead29a]">오행 분포</h3>
-              <div className="mt-3 grid grid-cols-5 gap-2">
-                {elementItems.map(([label, value]) => (
-                  <div key={String(label)} className="rounded-2xl border border-white/10 bg-[#0a1019] p-4 text-center">
-                    <p className="text-xs text-white/40">{label}</p>
-                    <p className="mt-2 text-xl font-bold text-white">{String(value)}</p>
-                  </div>
-                ))}
-              </div>
-
-              {basicAnalysis && (
-                <details className="mt-6 rounded-2xl border border-white/10 bg-[#0a1019] p-4">
-                  <summary className="cursor-pointer text-sm text-white/60">기본 AI 분석 원문 보기</summary>
-                  <p className="mt-4 whitespace-pre-line text-sm leading-7 text-white/50">{basicAnalysis}</p>
-                </details>
-              )}
-
-              <div className="mt-7 flex gap-3">
-                <button onClick={() => setStep(1)} className={buttonClass}>← 정보 수정</button>
-                <button onClick={() => setStep(3)} className={`${primaryButton} mt-0`}>상품 선택으로 →</button>
-              </div>
-            </section>
+            )}
           </section>
         )}
 
-        {step === 3 && (
-          <section className="rounded-[28px] border border-white/10 bg-white/[0.035] p-6 sm:p-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs tracking-[0.2em] text-[#d8b46a]">PRODUCT</p>
-                <h2 className="mt-2 text-xl font-semibold">분석 상품 선택</h2>
+        {step === 3 && selectedProduct && (
+          <section style={cardStyle}>
+            <StepTitle number="3" title="선택 상품 테스트 분석" />
+
+            <div
+              style={{
+                padding: 18,
+                borderRadius: 14,
+                background: "#f3f4f6",
+                marginBottom: 18,
+              }}
+            >
+              <div style={{ fontWeight: 900, fontSize: 20 }}>
+                {selectedProduct.name}
               </div>
-              <span className="text-xs text-white/35">TEST · 결제 없음</span>
+              <div style={{ fontWeight: 800, marginTop: 4 }}>
+                {formatPrice(selectedProduct.price)}
+              </div>
+              <div style={{ color: "#6b7280", marginTop: 6 }}>
+                {selectedProduct.description}
+              </div>
             </div>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {PRODUCTS.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setSelectedProduct(item.id)}
-                  className={`rounded-2xl border p-5 text-left transition ${
-                    selectedProduct === item.id
-                      ? "border-[#d8b46a]/70 bg-[#d8b46a]/10"
-                      : "border-white/10 bg-white/[0.02] hover:border-white/20"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-semibold">{item.name}</h3>
-                      <p className="mt-2 text-xs leading-5 text-white/40">{item.description}</p>
-                    </div>
-                    <strong className="shrink-0 text-[#f0d18a]">{item.price.toLocaleString()}원</strong>
-                  </div>
-                </button>
-              ))}
-            </div>
+            {selectedProduct.id === "compatibility" && (
+              <div
+                style={{
+                  padding: 18,
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 14,
+                  marginBottom: 18,
+                }}
+              >
+                <h3 style={{ marginTop: 0 }}>상대방 정보</h3>
+                <div style={gridStyle}>
+                  <label>
+                    상대방 이메일(선택)
+                    <input
+                      style={inputStyle}
+                      type="email"
+                      value={partner.email}
+                      onChange={(e) =>
+                        setPartner({ ...partner, email: e.target.value })
+                      }
+                    />
+                  </label>
 
-            {selectedProduct === "compatibility" && (
-              <div className="mt-6 rounded-2xl border border-[#d8b46a]/20 bg-[#d8b46a]/[0.04] p-5">
-                <h3 className="font-semibold text-[#f0d18a]">상대방 정보</h3>
-                <p className="mt-2 text-xs text-white/40">두 번째 사람의 만세력도 자동 계산하여 비교합니다.</p>
+                  <label>
+                    상대방 생년월일
+                    <input
+                      style={inputStyle}
+                      type="date"
+                      value={partner.birthDate}
+                      onChange={(e) =>
+                        setPartner({ ...partner, birthDate: e.target.value })
+                      }
+                    />
+                  </label>
 
-                <div className="mt-5 grid gap-4 sm:grid-cols-3">
-                  <input value={partnerBirthDate} onChange={(e) => setPartnerBirthDate(e.target.value)} type="date" className={inputClass} style={{ colorScheme: "dark" }} />
-                  <select value={partnerBirthTime} onChange={(e) => setPartnerBirthTime(e.target.value)} className={inputClass}>
-                    <option value="">시간대</option>
-                    {TIME_RANGES.map((time) => <option key={time} value={time}>{time}</option>)}
-                  </select>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(["남성", "여성"] as const).map((item) => (
-                      <button key={item} onClick={() => setPartnerGender(item)} className={partnerGender === item ? selectedButtonClass : buttonClass}>{item}</button>
-                    ))}
-                  </div>
+                  <label>
+                    상대방 태어난 시간
+                    <select
+                      style={inputStyle}
+                      value={partner.birthTime}
+                      onChange={(e) =>
+                        setPartner({ ...partner, birthTime: e.target.value })
+                      }
+                    >
+                      <option value="">시간 선택</option>
+                      {TIME_RANGES.map((time) => (
+                        <option key={time} value={time}>
+                          {time}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    상대방 성별
+                    <select
+                      style={inputStyle}
+                      value={partner.gender}
+                      onChange={(e) =>
+                        setPartner({
+                          ...partner,
+                          gender: e.target.value as "남성" | "여성",
+                        })
+                      }
+                    >
+                      <option value="남성">남성</option>
+                      <option value="여성">여성</option>
+                    </select>
+                  </label>
                 </div>
               </div>
             )}
 
-            <div className="mt-7 flex gap-3">
-              <button onClick={() => setStep(2)} className={buttonClass}>← 만세력</button>
-              <button onClick={generateResult} disabled={loading} className={`${primaryButton} mt-0`}>
-                {loading ? "AI 분석 생성 중..." : `${product.name} 생성하기 →`}
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button
+                style={secondaryButton}
+                onClick={() => {
+                  setStep(2);
+                  setResult("");
+                  setError("");
+                }}
+              >
+                상품 다시 선택
+              </button>
+
+              <button style={primaryButton} onClick={generateResult} disabled={loading}>
+                {loading ? "선택 상품 분석 생성 중..." : "선택 상품 테스트 분석 생성"}
+              </button>
+
+              <button style={secondaryButton} onClick={resetAll}>
+                처음부터
               </button>
             </div>
-          </section>
-        )}
 
-        {step === 4 && (
-          <section className="rounded-[28px] border border-[#d8b46a]/30 bg-white/[0.035] p-6 sm:p-8">
-            <div className="flex flex-col gap-4 border-b border-white/10 pb-6 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs tracking-[0.2em] text-[#d8b46a]">TEST RESULT</p>
-                <h2 className="mt-2 text-2xl font-semibold">{product.name}</h2>
-                <p className="mt-2 text-xs text-white/35">{email} · {birthDate} · {gender}</p>
+            {result && (
+              <div
+                style={{
+                  marginTop: 24,
+                  borderTop: "1px solid #e5e7eb",
+                  paddingTop: 24,
+                }}
+              >
+                <h2 style={{ fontSize: 22 }}>분석 결과</h2>
+                <div
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    lineHeight: 1.8,
+                    background: "#fafafa",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 14,
+                    padding: 20,
+                  }}
+                >
+                  {result}
+                </div>
               </div>
-              <span className="rounded-full border border-emerald-400/20 bg-emerald-400/5 px-3 py-2 text-xs text-emerald-200">TEST 생성 완료</span>
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-white/10 bg-[#0a1019] p-5">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {[
-                  ["년주", fourPillars.year],
-                  ["월주", fourPillars.month],
-                  ["일주", fourPillars.day],
-                  ["시주", fourPillars.time],
-                ].map(([label, value]) => (
-                  <div key={label} className="rounded-xl bg-white/[0.025] p-3 text-center">
-                    <p className="text-[10px] text-white/30">{label}</p>
-                    <p className="mt-1 font-semibold text-[#f0d18a]">{value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-5 whitespace-pre-line rounded-2xl border border-white/10 bg-[#0a1019] p-5 text-sm leading-8 text-white/70">
-              {result}
-            </div>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button onClick={copyResult} className={buttonClass}>결과 복사</button>
-              <button onClick={() => setStep(3)} className={buttonClass}>다른 상품 생성</button>
-              <button onClick={resetAll} className={primaryButton}>새 고객 분석</button>
-            </div>
-
-            <p className="mt-5 text-xs leading-5 text-white/25">
-              현재는 테스트 생성 단계입니다. 실제 결제·이메일·PDF 발송은 별도 연결 단계에서 붙입니다.
-            </p>
+            )}
           </section>
         )}
       </div>
@@ -481,29 +541,102 @@ export default function AdminPage() {
   );
 }
 
-const inputClass =
-  "w-full min-h-[52px] rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3 text-sm text-white outline-none focus:border-[#d8b46a]/70";
-
-const buttonClass =
-  "min-h-[52px] rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white/65 hover:border-[#d8b46a]/40 hover:text-white";
-
-const selectedButtonClass =
-  "min-h-[52px] rounded-2xl border border-[#d8b46a] bg-[#d8b46a]/15 px-5 py-3 text-sm font-semibold text-[#f0d18a]";
-
-const primaryButton =
-  "mt-7 min-h-[54px] flex-1 rounded-2xl bg-gradient-to-r from-[#c79b43] via-[#f0d18a] to-[#c79b43] px-6 py-4 font-bold text-[#171107] disabled:cursor-not-allowed disabled:opacity-50";
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function StepTitle({ number, title }: { number: string; title: string }) {
   return (
-    <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-[#ead29a]">{label}</span>
-      {children}
-    </label>
+    <h2 style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 0 }}>
+      <span
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: "50%",
+          background: "#111827",
+          color: "#fff",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 14,
+        }}
+      >
+        {number}
+      </span>
+      {title}
+    </h2>
   );
 }
+
+function InfoBox({ title, value }: { title: string; value: string }) {
+  return (
+    <div
+      style={{
+        background: "#f9fafb",
+        border: "1px solid #e5e7eb",
+        borderRadius: 12,
+        padding: 14,
+        textAlign: "center",
+      }}
+    >
+      <div style={{ color: "#6b7280", fontSize: 12 }}>{title}</div>
+      <div style={{ fontSize: 20, fontWeight: 900, marginTop: 4 }}>{value}</div>
+    </div>
+  );
+}
+
+const cardStyle = {
+  background: "#fff",
+  borderRadius: 18,
+  padding: 24,
+  boxShadow: "0 5px 20px rgba(0,0,0,0.05)",
+  marginBottom: 20,
+};
+
+const gridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gap: 14,
+  marginBottom: 20,
+};
+
+const inputStyle = {
+  width: "100%",
+  boxSizing: "border-box" as const,
+  padding: "12px 13px",
+  marginTop: 7,
+  border: "1px solid #d1d5db",
+  borderRadius: 10,
+  fontSize: 15,
+  background: "#fff",
+};
+
+const primaryButton = {
+  border: 0,
+  borderRadius: 10,
+  background: "#111827",
+  color: "#fff",
+  padding: "13px 18px",
+  fontWeight: 900,
+  cursor: "pointer",
+};
+
+const secondaryButton = {
+  border: "1px solid #d1d5db",
+  borderRadius: 10,
+  background: "#fff",
+  color: "#111827",
+  padding: "13px 18px",
+  fontWeight: 800,
+  cursor: "pointer",
+};
+
+const productGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+  gap: 12,
+};
+
+const productButton = {
+  textAlign: "left" as const,
+  background: "#fff",
+  borderRadius: 14,
+  padding: 18,
+  cursor: "pointer",
+};
