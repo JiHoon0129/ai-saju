@@ -409,36 +409,49 @@ export default function AdminPage() {
   }
 
   async function sharePdf() {
-    if (!pdfBlob) {
-      setError(
-        "먼저 AI 분석과 PDF 생성을 완료해주세요."
-      );
-      return;
-    }
+  if (!pdfBlob || pdfBlob.size === 0) {
+    setError(
+      "먼저 AI 분석과 PDF 생성을 완료해주세요."
+    );
+    return;
+  }
 
-    try {
-      const file = new File(
-        [pdfBlob],
-        `${
-          selectedProduct?.name || "사주분석"
-        }_사주분석.pdf`,
-        {
-          type: "application/pdf",
-        }
-      );
+  setError("");
+  setMessage("");
+
+  const fileName = `${
+    selectedProduct?.name || "사주분석"
+  }_사주분석.pdf`;
+
+  try {
+    const file = new File(
+      [pdfBlob],
+      fileName,
+      {
+        type: "application/pdf",
+      }
+    );
+
+    // 모바일/지원 브라우저의 실제 파일 공유
+    if (
+      typeof navigator !== "undefined" &&
+      typeof navigator.share === "function" &&
+      typeof navigator.canShare === "function"
+    ) {
+      const shareData = {
+        title: "AI 사주 분석 결과",
+        text: "AI 사주 분석 결과 PDF입니다.",
+        files: [file],
+      };
 
       if (
-        navigator.share &&
-        navigator.canShare &&
         navigator.canShare({
           files: [file],
         })
       ) {
-        await navigator.share({
-          title: "AI 사주 분석 결과",
-          text: "AI 사주 분석 결과 PDF입니다.",
-          files: [file],
-        });
+        await navigator.share(
+          shareData
+        );
 
         setMessage(
           "PDF 공유가 완료되었습니다."
@@ -446,23 +459,71 @@ export default function AdminPage() {
 
         return;
       }
-
-      downloadPdf();
-    } catch (err) {
-      if (
-        err instanceof DOMException &&
-        err.name === "AbortError"
-      ) {
-        return;
-      }
-
-      setError(
-        "공유 기능을 사용할 수 없어 다운로드 방식으로 진행합니다."
-      );
-
-      downloadPdf();
     }
+
+    // 파일 공유를 지원하지 않는 환경
+    // 이 경우 PDF를 확실하게 다운로드
+    const url =
+      URL.createObjectURL(file);
+
+    const link =
+      document.createElement("a");
+
+    link.href = url;
+    link.download = fileName;
+    link.rel = "noopener";
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 1000);
+
+    setMessage(
+      "현재 브라우저는 PDF 직접 공유를 지원하지 않아 PDF를 다운로드했습니다."
+    );
+  } catch (err) {
+    if (
+      err instanceof DOMException &&
+      err.name === "AbortError"
+    ) {
+      setMessage(
+        "PDF 공유를 취소했습니다."
+      );
+      return;
+    }
+
+    console.error(
+      "PDF share error:",
+      err
+    );
+
+    // 공유 실패 시에도 PDF 자체는 보존
+    const url =
+      URL.createObjectURL(pdfBlob);
+
+    const link =
+      document.createElement("a");
+
+    link.href = url;
+    link.download = fileName;
+    link.rel = "noopener";
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 1000);
+
+    setError(
+      "파일 공유를 사용할 수 없어 PDF를 다운로드했습니다."
+    );
   }
+}
 
   function resetAll() {
     setProductId(null);
