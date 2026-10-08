@@ -20,7 +20,6 @@ type FiveElements = {
 };
 
 type PersonData = {
-  email: string;
   birthDate: string;
   birthTime: string;
   gender: "남성" | "여성";
@@ -43,11 +42,12 @@ const TIME_RANGES = [
 ];
 
 const formatPrice = (price: number) =>
-  price === 0 ? "무료" : `${price.toLocaleString("ko-KR")}원`;
+  price === 0
+    ? "무료"
+    : `${price.toLocaleString("ko-KR")}원`;
 
 export default function AdminPage() {
   const [customer, setCustomer] = useState<PersonData>({
-    email: "",
     birthDate: "",
     birthTime: "",
     gender: "남성",
@@ -57,7 +57,6 @@ export default function AdminPage() {
     useState<AdminProduct | null>(null);
 
   const [partner, setPartner] = useState<PersonData>({
-    email: "",
     birthDate: "",
     birthTime: "",
     gender: "여성",
@@ -65,12 +64,16 @@ export default function AdminPage() {
 
   const [result, setResult] = useState("");
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
-  const [pdfFileName, setPdfFileName] = useState("ai-saju-result.pdf");
+  const [pdfFileName, setPdfFileName] =
+    useState("ai-saju-result.pdf");
 
   const [pdfStatus, setPdfStatus] = useState("");
 
-  const [pillars, setPillars] = useState<FourPillars | null>(null);
-  const [elements, setElements] = useState<FiveElements | null>(null);
+  const [pillars, setPillars] =
+    useState<FourPillars | null>(null);
+
+  const [elements, setElements] =
+    useState<FiveElements | null>(null);
 
   const [partnerPillars, setPartnerPillars] =
     useState<FourPillars | null>(null);
@@ -82,24 +85,30 @@ export default function AdminPage() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [error, setError] = useState("");
 
-  async function calculatePerson(person: PersonData) {
-    const response = await fetch("/api/admin-saju", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        birthDate: person.birthDate,
-        birthTime: person.birthTime,
-        gender: person.gender,
-      }),
-    });
+  async function calculatePerson(
+    person: PersonData
+  ) {
+    const response = await fetch(
+      "/api/admin-saju",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          birthDate: person.birthDate,
+          birthTime: person.birthTime,
+          gender: person.gender,
+        }),
+      }
+    );
 
     const data = await response.json();
 
     if (!response.ok) {
       throw new Error(
-        data.error || "만세력 계산에 실패했습니다."
+        data.error ||
+          "만세력 계산에 실패했습니다."
       );
     }
 
@@ -128,7 +137,8 @@ export default function AdminPage() {
     setLoading(true);
 
     try {
-      const data = await calculatePerson(customer);
+      const data =
+        await calculatePerson(customer);
 
       setPillars(data.fourPillars);
       setElements(data.fiveElements);
@@ -145,7 +155,9 @@ export default function AdminPage() {
     }
   }
 
-  function handleProductSelect(product: AdminProduct) {
+  function handleProductSelect(
+    product: AdminProduct
+  ) {
     setError("");
     setResult("");
     setPdfBlob(null);
@@ -253,6 +265,16 @@ export default function AdminPage() {
         );
       }
 
+      if (
+        typeof data.result !==
+          "string" ||
+        !data.result.trim()
+      ) {
+        throw new Error(
+          "AI 분석 결과가 비어 있습니다."
+        );
+      }
+
       setResult(data.result);
 
       setPdfStatus(
@@ -318,9 +340,18 @@ export default function AdminPage() {
       const blob =
         await pdfResponse.blob();
 
+      if (blob.size === 0) {
+        throw new Error(
+          "생성된 PDF 파일이 비어 있습니다."
+        );
+      }
+
       const safeProductName =
         selectedProduct.name
-          .replace(/[\\/:*?"<>|]/g, "")
+          .replace(
+            /[\\/:*?"<>|]/g,
+            ""
+          )
           .trim();
 
       const fileName =
@@ -371,7 +402,7 @@ export default function AdminPage() {
     }, 1000);
 
     setPdfStatus(
-      "PDF 파일 저장을 시작했습니다."
+      "PDF 저장을 시작했습니다."
     );
   }
 
@@ -394,37 +425,49 @@ export default function AdminPage() {
         );
 
       if (
-        navigator.share &&
-        navigator.canShare &&
-        navigator.canShare({
-          files: [file],
-        })
+        typeof navigator.share ===
+          "function" &&
+        typeof navigator.canShare ===
+          "function"
       ) {
-        await navigator.share({
-          title:
-            "AI 사주 분석 결과",
-          text:
-            "AI 사주 분석 결과 PDF입니다.",
+        const shareData = {
           files: [file],
-        });
+        };
 
-        setPdfStatus(
-          "PDF 공유를 완료했습니다."
-        );
+        if (
+          navigator.canShare(
+            shareData
+          )
+        ) {
+          await navigator.share({
+            title:
+              "AI 사주 분석 결과",
+            text:
+              "AI 사주 분석 결과 PDF입니다.",
+            files: [file],
+          });
 
-        return;
+          setPdfStatus(
+            "PDF 공유를 완료했습니다."
+          );
+
+          return;
+        }
       }
 
       downloadPdf();
 
       setPdfStatus(
-        "이 기기에서는 파일 공유를 지원하지 않아 PDF를 저장했습니다."
+        "이 기기에서는 PDF 공유를 지원하지 않아 파일 저장으로 전환했습니다."
       );
     } catch (e) {
       if (
         e instanceof DOMException &&
         e.name === "AbortError"
       ) {
+        setPdfStatus(
+          "PDF 공유를 취소했습니다."
+        );
         return;
       }
 
@@ -436,7 +479,6 @@ export default function AdminPage() {
 
   function resetAll() {
     setCustomer({
-      email: "",
       birthDate: "",
       birthTime: "",
       gender: "남성",
@@ -445,7 +487,6 @@ export default function AdminPage() {
     setSelectedProduct(null);
 
     setPartner({
-      email: "",
       birthDate: "",
       birthTime: "",
       gender: "여성",
@@ -461,7 +502,6 @@ export default function AdminPage() {
     setPdfFileName(
       "ai-saju-result.pdf"
     );
-
     setPdfStatus("");
     setError("");
     setStep(1);
@@ -521,7 +561,8 @@ export default function AdminPage() {
           border-radius: 18px;
           padding: 24px;
           box-shadow:
-            0 5px 20px rgba(0, 0, 0, 0.05);
+            0 5px 20px
+            rgba(0, 0, 0, 0.05);
           margin-bottom: 20px;
         }
 
@@ -687,14 +728,6 @@ export default function AdminPage() {
             gap: 5px;
           }
 
-          .element-grid > div {
-            padding: 9px 4px !important;
-          }
-
-          .element-grid > div > div:last-child {
-            font-size: 17px !important;
-          }
-
           .product-grid {
             grid-template-columns: 1fr;
           }
@@ -738,8 +771,9 @@ export default function AdminPage() {
             </h1>
 
             <p className="header-description">
-              고객 정보를 입력하고 상품을 선택한 뒤
-              분석 결과 PDF를 생성합니다.
+              고객 정보를 입력하고 상품을
+              선택한 뒤 분석 결과 PDF를
+              생성합니다.
             </p>
 
             <div
@@ -754,7 +788,7 @@ export default function AdminPage() {
                 fontWeight: 800,
               }}
             >
-              관리자 전용 · PDF 직접 저장/공유
+              관리자 전용 · PDF 저장/공유
             </div>
           </header>
 
@@ -773,43 +807,19 @@ export default function AdminPage() {
 
               <div className="grid">
                 <label>
-                  고객 이메일
-                  <span
-                    style={{
-                      display: "block",
-                      color: "#9ca3af",
-                      fontSize: 12,
-                      marginTop: 4,
-                    }}
-                  >
-                    선택 입력 · PDF 발송은 직접 진행
-                  </span>
-
-                  <input
-                    className="input"
-                    type="email"
-                    value={customer.email}
-                    onChange={(e) =>
-                      setCustomer({
-                        ...customer,
-                        email: e.target.value,
-                      })
-                    }
-                    placeholder="customer@example.com"
-                  />
-                </label>
-
-                <label>
                   생년월일
 
                   <input
                     className="input"
                     type="date"
-                    value={customer.birthDate}
+                    value={
+                      customer.birthDate
+                    }
                     onChange={(e) =>
                       setCustomer({
                         ...customer,
-                        birthDate: e.target.value,
+                        birthDate:
+                          e.target.value,
                       })
                     }
                   />
@@ -820,11 +830,14 @@ export default function AdminPage() {
 
                   <select
                     className="input"
-                    value={customer.birthTime}
+                    value={
+                      customer.birthTime
+                    }
                     onChange={(e) =>
                       setCustomer({
                         ...customer,
-                        birthTime: e.target.value,
+                        birthTime:
+                          e.target.value,
                       })
                     }
                   >
@@ -850,7 +863,9 @@ export default function AdminPage() {
 
                   <select
                     className="input"
-                    value={customer.gender}
+                    value={
+                      customer.gender
+                    }
                     onChange={(e) =>
                       setCustomer({
                         ...customer,
@@ -864,6 +879,7 @@ export default function AdminPage() {
                     <option value="남성">
                       남성
                     </option>
+
                     <option value="여성">
                       여성
                     </option>
@@ -899,14 +915,17 @@ export default function AdminPage() {
                     title="년주"
                     value={pillars.year}
                   />
+
                   <InfoBox
                     title="월주"
                     value={pillars.month}
                   />
+
                   <InfoBox
                     title="일주"
                     value={pillars.day}
                   />
+
                   <InfoBox
                     title="시주"
                     value={pillars.time}
@@ -918,7 +937,9 @@ export default function AdminPage() {
                     marginTop: 18,
                   }}
                 >
-                  <strong>오행</strong>
+                  <strong>
+                    오행
+                  </strong>
 
                   <div
                     className="element-grid"
@@ -930,18 +951,22 @@ export default function AdminPage() {
                       title="木"
                       value={`${elements.wood}`}
                     />
+
                     <InfoBox
                       title="火"
                       value={`${elements.fire}`}
                     />
+
                     <InfoBox
                       title="土"
                       value={`${elements.earth}`}
                     />
+
                     <InfoBox
                       title="金"
                       value={`${elements.metal}`}
                     />
+
                     <InfoBox
                       title="水"
                       value={`${elements.water}`}
@@ -971,6 +996,7 @@ export default function AdminPage() {
                             key={
                               product.id
                             }
+                            type="button"
                             onClick={() =>
                               handleProductSelect(
                                 product
@@ -1043,7 +1069,8 @@ export default function AdminPage() {
                   style={{
                     padding: 18,
                     borderRadius: 14,
-                    background: "#f3f4f6",
+                    background:
+                      "#f3f4f6",
                     marginBottom: 18,
                   }}
                 >
@@ -1101,38 +1128,6 @@ export default function AdminPage() {
                     </h3>
 
                     <div className="grid">
-                      <label>
-                        상대방 이메일
-                        <span
-                          style={{
-                            display:
-                              "block",
-                            color:
-                              "#9ca3af",
-                            fontSize: 12,
-                            marginTop: 4,
-                          }}
-                        >
-                          선택 입력
-                        </span>
-
-                        <input
-                          className="input"
-                          type="email"
-                          value={
-                            partner.email
-                          }
-                          onChange={(e) =>
-                            setPartner({
-                              ...partner,
-                              email:
-                                e.target
-                                  .value,
-                            })
-                          }
-                        />
-                      </label>
-
                       <label>
                         상대방 생년월일
 
@@ -1211,6 +1206,7 @@ export default function AdminPage() {
                           <option value="남성">
                             남성
                           </option>
+
                           <option value="여성">
                             여성
                           </option>
@@ -1222,6 +1218,7 @@ export default function AdminPage() {
 
                 <div className="button-row">
                   <button
+                    type="button"
                     className="secondary-button"
                     onClick={() => {
                       setStep(2);
@@ -1235,8 +1232,11 @@ export default function AdminPage() {
                   </button>
 
                   <button
+                    type="button"
                     className="primary-button"
-                    onClick={generateResult}
+                    onClick={
+                      generateResult
+                    }
                     disabled={loading}
                   >
                     {loading
@@ -1245,6 +1245,7 @@ export default function AdminPage() {
                   </button>
 
                   <button
+                    type="button"
                     className="secondary-button"
                     onClick={resetAll}
                   >
@@ -1307,6 +1308,7 @@ export default function AdminPage() {
                           }}
                         >
                           <button
+                            type="button"
                             className="primary-button"
                             onClick={
                               downloadPdf
@@ -1316,6 +1318,7 @@ export default function AdminPage() {
                           </button>
 
                           <button
+                            type="button"
                             className="share-button"
                             onClick={
                               sharePdf
@@ -1341,9 +1344,9 @@ export default function AdminPage() {
                             PDF 공유
                           </strong>
                           를 누르면 휴대폰의
-                          공유 화면에서
+                          기본 공유 화면에서
                           카카오톡, 메일,
-                          파일 저장 등을
+                          파일 앱 등을
                           선택할 수 있습니다.
                         </p>
                       </div>
