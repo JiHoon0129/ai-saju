@@ -1,6 +1,13 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
-import { getProduct, type ProductId } from "../../../lib/products";
+import {
+  getAdminProduct,
+  type AdminProductId,
+} from "../../../lib/admin-products";
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 type FourPillars = {
   year: string;
@@ -17,256 +24,252 @@ type FiveElements = {
   water: number;
 };
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function buildProductInstructions(productId: AdminProductId) {
+  switch (productId) {
+    case "free":
+      return `
+[무료 사주 맛보기]
+- 결과는 5개 핵심 항목으로 구성한다.
+- ① 전체적인 첫인상 ② 강점 ③ 주의할 점 ④ 오행 균형 ⑤ 한 줄 조언
+- 700~1000자 정도로 간결하게 작성한다.
+- 유료 상품에서 제공할 세부 운세나 장기 흐름은 깊게 다루지 않는다.
+`;
 
-const PRODUCT_GUIDES: Record<ProductId, string> = {
-  detail: `
-목표: 고객 한 사람의 사주를 상세하게 풀이합니다.
-반드시 포함:
-1. 기본 성향
-2. 강점과 주의할 점
-3. 오행 균형 해석
-4. 대인관계 특징
-5. 앞으로의 전반적인 흐름
-`,
-  comprehensive: `
-목표: 고객의 사주를 종합적으로 풀이합니다.
-반드시 포함:
-1. 기본 성향
-2. 재물운
-3. 직업·커리어
-4. 연애·대인관계
-5. 오행 균형
-6. 시기별 흐름
-7. 종합 조언
-`,
-  love: `
-목표: 연애와 인간관계에 집중해 풀이합니다.
-반드시 포함:
-1. 연애 성향
-2. 호감 표현과 관계 패턴
-3. 잘 맞는 관계의 특징
-4. 갈등에서 주의할 점
-5. 인연 흐름
-6. 관계 조언
-`,
-  "money-job": `
-목표: 재물과 직업에 집중해 풀이합니다.
-반드시 포함:
-1. 돈을 다루는 성향
-2. 재물 흐름의 특징
-3. 직업 적성 및 강점
-4. 조직·사업 환경에서의 특징
-5. 주의할 재물 습관
-6. 커리어 방향과 조언
-`,
-  compatibility: `
-목표: 두 사람의 관계 궁합을 풀이합니다.
-두 사람의 만세력과 오행을 비교해야 합니다.
-반드시 포함:
-1. 두 사람의 기본 성향 비교
-2. 오행 조화
-3. 서로에게 끌리는 부분
-4. 갈등이 생길 수 있는 부분
-5. 관계 유지에 도움이 되는 방법
-6. 종합 궁합 해석
-`,
-};
+    case "love":
+      return `
+[연애운 분석]
+- 연애만 집중해서 분석한다.
+- 반드시 다음 순서로 작성한다:
+  1. 연애 기본 성향
+  2. 호감 표현 방식
+  3. 관계에서 반복되기 쉬운 패턴
+  4. 잘 맞는 상대의 특징
+  5. 갈등이 생겼을 때 주의점
+  6. 인연을 키우는 실전 조언
+- 재물·직업 이야기는 최소화한다.
+- 일반적인 사주 문구를 반복하지 말고 원국과 오행을 근거로 구체화한다.
+`;
 
-function isValidFourPillars(value: unknown): value is FourPillars {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Record<string, unknown>;
-  return ["year", "month", "day", "time"].every(
-    (key) => typeof v[key] === "string"
-  );
-}
+    case "money-job":
+      return `
+[재물·직업운 분석]
+- 재물과 직업에만 초점을 맞춘다.
+- 반드시 다음 순서로 작성한다:
+  1. 돈을 다루는 성향
+  2. 소비·저축에서의 특징
+  3. 일할 때 강점을 발휘하는 환경
+  4. 직업 선택 시 유리한 방향
+  5. 조직생활과 독립업무 중 특징
+  6. 현실적인 커리어 조언
+- 연애 이야기는 넣지 않는다.
+- 단순히 "돈복이 좋다/나쁘다"로 끝내지 말고 오행 구조를 연결한다.
+`;
 
-function isValidFiveElements(value: unknown): value is FiveElements {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Record<string, unknown>;
-  return ["wood", "fire", "earth", "metal", "water"].every(
-    (key) => typeof v[key] === "number"
-  );
+    case "detail":
+      return `
+[상세 사주 분석]
+- 개인의 원국 구조와 오행 균형을 중심으로 분석한다.
+- 반드시 다음 순서로 작성한다:
+  1. 사주 원국 해석
+  2. 오행 분포
+  3. 성격과 행동 특성
+  4. 강점
+  5. 취약점과 주의점
+  6. 대인관계 특징
+  7. 생활에서 활용할 조언
+- 연애·재물·직업을 단독 운세처럼 길게 예측하지 않는다.
+- 무료 결과보다 최소 2배 이상 구체적으로 작성한다.
+`;
+
+    case "compatibility":
+      return `
+[궁합 분석]
+- 두 사람의 원국을 직접 비교한다.
+- 반드시 다음 순서로 작성한다:
+  1. 두 사람의 기본 기질 비교
+  2. 오행 상호작용
+  3. 서로에게 끌리는 부분
+  4. 갈등이 발생하기 쉬운 지점
+  5. 대화와 감정 표현의 차이
+  6. 관계를 오래 유지하기 위한 방법
+  7. 궁합 총평
+- 한 사람만 단독으로 해석하지 않는다.
+- "좋다/나쁘다" 단정 대신 어떤 상호작용 때문에 그런 경향이 생기는지 설명한다.
+`;
+
+    case "comprehensive":
+      return `
+[종합 사주 분석]
+- 가장 깊고 넓은 보고서로 작성한다.
+- 반드시 다음 순서로 작성한다:
+  1. 전체 원국 핵심 요약
+  2. 오행 구조와 균형
+  3. 성격 및 행동 패턴
+  4. 대인관계
+  5. 연애 및 인연
+  6. 재물 흐름
+  7. 직업 및 커리어
+  8. 생활 습관과 주의점
+  9. 앞으로의 방향을 잡는 실전 조언
+  10. 전체 총평
+- 다른 상품보다 가장 상세해야 한다.
+- 각 항목에서 같은 문장을 반복하지 않는다.
+- 막연한 미래 예언보다 원국을 근거로 현실적인 방향을 제시한다.
+`;
+
+    default:
+      return "";
+  }
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    const productId = body?.productId as ProductId;
-    const product = getProduct(productId);
+    const {
+      productId,
+      customer,
+      fourPillars,
+      fiveElements,
+      partnerFourPillars,
+      partnerFiveElements,
+    } = body;
+
+    const product = getAdminProduct(String(productId));
 
     if (!product) {
       return NextResponse.json(
-        { error: "올바른 상품을 선택해주세요." },
+        { error: "선택한 상품을 찾을 수 없습니다." },
         { status: 400 }
       );
     }
 
-    const email = typeof body?.email === "string" ? body.email.trim() : "";
-    const birthDate =
-      typeof body?.birthDate === "string" ? body.birthDate.trim() : "";
-    const birthTime =
-      typeof body?.birthTime === "string" ? body.birthTime.trim() : "";
-    const gender = typeof body?.gender === "string" ? body.gender.trim() : "";
-
-    if (!email || !birthDate || !birthTime || !gender) {
+    if (
+      !customer?.birthDate ||
+      !customer?.birthTime ||
+      !customer?.gender ||
+      !fourPillars ||
+      !fiveElements
+    ) {
       return NextResponse.json(
-        { error: "고객 정보가 부족합니다." },
+        { error: "고객 사주 정보가 부족합니다." },
         { status: 400 }
       );
     }
 
-    if (!isValidFourPillars(body?.fourPillars)) {
+    if (
+      productId === "compatibility" &&
+      (!partnerFourPillars || !partnerFiveElements)
+    ) {
       return NextResponse.json(
-        { error: "본인 만세력 데이터가 올바르지 않습니다." },
+        { error: "궁합 분석에는 상대방 사주 정보가 필요합니다." },
         { status: 400 }
       );
     }
 
-    if (!isValidFiveElements(body?.fiveElements)) {
-      return NextResponse.json(
-        { error: "본인 오행 데이터가 올바르지 않습니다." },
-        { status: 400 }
-      );
-    }
+    const productInstructions = buildProductInstructions(
+      productId as AdminProductId
+    );
 
-    if (productId === "compatibility") {
-      if (
-        !isValidFourPillars(body?.partnerFourPillars) ||
-        !isValidFiveElements(body?.partnerFiveElements)
-      ) {
-        return NextResponse.json(
-          { error: "궁합 분석에는 상대방 만세력 데이터가 필요합니다." },
-          { status: 400 }
-        );
-      }
-    }
+    // 같은 사람이라도 상품을 바꾸면 반드시 다른 분석 구조가 나오도록
+    // 상품 ID와 상품명을 프롬프트의 핵심 조건으로 전달합니다.
+    const uniqueAnalysisKey = [
+      product.id,
+      product.name,
+      customer.birthDate,
+      customer.birthTime,
+      customer.gender,
+      fourPillars.year,
+      fourPillars.month,
+      fourPillars.day,
+      fourPillars.time,
+    ].join("|");
 
     const prompt = `
-당신은 한국 전통 사주 해석을 참고해 읽기 쉬운 콘텐츠를 작성하는 분석가입니다.
+당신은 한국 전통 사주를 현대적인 언어로 설명하는 전문 상담 AI입니다.
 
-중요 원칙:
-- 제공된 만세력 데이터를 사실값으로 사용합니다.
-- 만세력 자체를 새로 계산하거나 임의로 변경하지 않습니다.
-- 단정적인 미래 예언처럼 표현하지 않습니다.
-- 의료·법률·투자 등 전문적인 의사결정을 대신한다고 표현하지 않습니다.
-- 고객이 실제 사람에게 설명받는 것처럼 자연스럽고 구체적으로 작성합니다.
-- 같은 사람이라도 상품별 목적에 따라 분석의 초점을 명확하게 다르게 합니다.
-- "AI가 분석했습니다", "프롬프트", "데이터 입력" 같은 내부 표현은 결과에 쓰지 않습니다.
+중요한 운영 규칙:
+1. 아래에서 선택된 상품 하나만 분석합니다.
+2. 다른 상품의 보고서처럼 답하지 않습니다.
+3. 같은 고객이라도 상품이 달라지면 반드시 분석 관점, 목차, 설명 내용이 달라야 합니다.
+4. 입력된 사주 원국과 오행을 근거로 작성합니다.
+5. 근거 없는 확정적 예언, 질병 진단, 법률·투자 보장은 하지 않습니다.
+6. 결과는 고객이 실제 상품을 구매하고 받은 보고서처럼 자연스럽고 구체적으로 작성합니다.
+7. 고객 이메일은 분석 내용에 사용하지 않습니다.
+8. 아래의 UNIQUE KEY는 결과가 상품별로 섞이지 않도록 하기 위한 내부 식별자입니다. 답변에 그대로 출력하지 마세요.
 
-상품: ${product.name}
-상품 설명: ${product.description}
-
-${PRODUCT_GUIDES[productId]}
+상품명: ${product.name}
+상품 가격: ${product.price.toLocaleString("ko-KR")}원
+상품 ID: ${product.id}
+UNIQUE KEY: ${uniqueAnalysisKey}
 
 고객:
-이메일: ${email}
-생년월일: ${birthDate}
-출생 시간대: ${birthTime}
-성별: ${gender}
+- 생년월일: ${customer.birthDate}
+- 태어난 시간: ${customer.birthTime}
+- 성별: ${customer.gender}
 
-본인 사주 원국:
-년주: ${body.fourPillars.year}
-월주: ${body.fourPillars.month}
-일주: ${body.fourPillars.day}
-시주: ${body.fourPillars.time}
+고객 사주 원국:
+- 년주: ${fourPillars.year}
+- 월주: ${fourPillars.month}
+- 일주: ${fourPillars.day}
+- 시주: ${fourPillars.time}
 
-본인 오행:
-목: ${body.fiveElements.wood}
-화: ${body.fiveElements.fire}
-토: ${body.fiveElements.earth}
-금: ${body.fiveElements.metal}
-수: ${body.fiveElements.water}
+고객 오행:
+- 목: ${fiveElements.wood}
+- 화: ${fiveElements.fire}
+- 토: ${fiveElements.earth}
+- 금: ${fiveElements.metal}
+- 수: ${fiveElements.water}
+
+${
+  productId === "compatibility"
+    ? `
+상대방 사주 원국:
+- 년주: ${partnerFourPillars.year}
+- 월주: ${partnerFourPillars.month}
+- 일주: ${partnerFourPillars.day}
+- 시주: ${partnerFourPillars.time}
+
+상대방 오행:
+- 목: ${partnerFiveElements.wood}
+- 화: ${partnerFiveElements.fire}
+- 토: ${partnerFiveElements.earth}
+- 금: ${partnerFiveElements.metal}
+- 수: ${partnerFiveElements.water}
+`
+    : ""
+}
+
+${productInstructions}
+
+작성 방식:
+- 한국어
+- 제목과 소제목을 명확하게 구분
+- 같은 표현을 반복하지 않기
+- 입력값과 맞지 않는 내용을 만들어내지 않기
+- 무료 상품은 짧고 핵심적으로, 유료 상품은 해당 상품의 전문 범위에 맞게 더 구체적으로 작성
 `;
 
-    if (productId === "compatibility") {
-      prompt.concat(`
-상대방:
-생년월일: ${body.partnerBirthDate}
-출생 시간대: ${body.partnerBirthTime}
-성별: ${body.partnerGender}
-
-상대방 사주 원국:
-년주: ${body.partnerFourPillars.year}
-월주: ${body.partnerFourPillars.month}
-일주: ${body.partnerFourPillars.day}
-시주: ${body.partnerFourPillars.time}
-
-상대방 오행:
-목: ${body.partnerFiveElements.wood}
-화: ${body.partnerFiveElements.fire}
-토: ${body.partnerFiveElements.earth}
-금: ${body.partnerFiveElements.metal}
-수: ${body.partnerFiveElements.water}
-`);
-    }
-
-    const finalPrompt =
-      productId === "compatibility"
-        ? `${prompt}
-
-상대방:
-생년월일: ${body.partnerBirthDate}
-출생 시간대: ${body.partnerBirthTime}
-성별: ${body.partnerGender}
-
-상대방 사주 원국:
-년주: ${body.partnerFourPillars.year}
-월주: ${body.partnerFourPillars.month}
-일주: ${body.partnerFourPillars.day}
-시주: ${body.partnerFourPillars.time}
-
-상대방 오행:
-목: ${body.partnerFiveElements.wood}
-화: ${body.partnerFiveElements.fire}
-토: ${body.partnerFiveElements.earth}
-금: ${body.partnerFiveElements.metal}
-수: ${body.partnerFiveElements.water}
-`
-        : prompt;
+    const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
     const response = await openai.responses.create({
-      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-      input: [
-        {
-          role: "system",
-          content:
-            "한국어로 자연스럽고 정돈된 사주 분석 결과를 작성하세요. 결과만 출력하세요.",
-        },
-        {
-          role: "user",
-          content: finalPrompt,
-        },
-      ],
+      model,
+      input: prompt,
     });
 
-    const result = response.output_text?.trim();
-
-    if (!result) {
-      return NextResponse.json(
-        { error: "분석 결과가 비어 있습니다." },
-        { status: 502 }
-      );
-    }
-
     return NextResponse.json({
-      ok: true,
-      product,
-      result,
-      generatedAt: new Date().toISOString(),
+      result: response.output_text,
+      product: {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+      },
     });
   } catch (error) {
     console.error("test-analysis error:", error);
+
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "분석 생성 중 서버 오류가 발생했습니다.",
-      },
+      { error: "테스트 분석 생성 중 오류가 발생했습니다." },
       { status: 500 }
     );
   }
