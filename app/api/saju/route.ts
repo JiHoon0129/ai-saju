@@ -8,50 +8,89 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
   try {
-    const { birthDate, birthTime, gender } = await request.json();
+    const body = await request.json();
+
+    const birthDate =
+      typeof body.birthDate === "string" ? body.birthDate.trim() : "";
+
+    const birthTime =
+      typeof body.birthTime === "string" ? body.birthTime.trim() : "";
+
+    const gender =
+      typeof body.gender === "string" ? body.gender.trim() : "";
 
     if (!birthDate || !birthTime || !gender) {
       return NextResponse.json(
-        { error: "생년월일, 태어난 시간, 성별을 모두 입력해주세요." },
+        {
+          error: "생년월일, 태어난 시간, 성별을 모두 입력해주세요.",
+        },
         { status: 400 }
       );
     }
 
-    // 생년월일 분리
-    const [year, month, day] = birthDate.split("-").map(Number);
+    // 생년월일: YYYY-MM-DD
+    const dateParts = birthDate.split("-");
 
-    // 태어난 시간 분리
-    const [hour, minute] = birthTime.split(":").map(Number);
+    if (dateParts.length !== 3) {
+      return NextResponse.json(
+        {
+          error: "생년월일 형식이 올바르지 않습니다.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const year = Number(dateParts[0]);
+    const month = Number(dateParts[1]);
+    const day = Number(dateParts[2]);
+
+    // 태어난 시간: HH:MM
+    // 관리자 페이지에서 14:30~16:00처럼 전달되는 경우
+    // 시작 시간 14:30만 사용합니다.
+    const normalizedBirthTime = birthTime.split("~")[0].trim();
+    const timeParts = normalizedBirthTime.split(":");
+
+    if (timeParts.length !== 2) {
+      return NextResponse.json(
+        {
+          error: "태어난 시간 형식이 올바르지 않습니다.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const hour = Number(timeParts[0]);
+    const minute = Number(timeParts[1]);
+
+    const validGender = gender === "남성" || gender === "여성";
 
     if (
-  !Number.isInteger(year) ||
-  !Number.isInteger(month) ||
-  !Number.isInteger(day) ||
-  !Number.isInteger(hour) ||
-  !Number.isInteger(minute) ||
-  month < 1 ||
-  month > 12 ||
-  day < 1 ||
-  day > 31 ||
-  hour < 0 ||
-  hour > 23 ||
-  minute < 0 ||
-  minute > 59 ||
-  !["남성", "여성"].includes(gender)
-) {
-  return NextResponse.json(
-    { error: "생년월일 또는 태어난 시간 형식이 올바르지 않습니다." },
-    { status: 400 }
-  );
-}
-  {
+      !Number.isInteger(year) ||
+      !Number.isInteger(month) ||
+      !Number.isInteger(day) ||
+      !Number.isInteger(hour) ||
+      !Number.isInteger(minute) ||
+      year < 1900 ||
+      year > 2100 ||
+      month < 1 ||
+      month > 12 ||
+      day < 1 ||
+      day > 31 ||
+      hour < 0 ||
+      hour > 23 ||
+      minute < 0 ||
+      minute > 59 ||
+      !validGender
+    ) {
       return NextResponse.json(
-        { error: "생년월일 또는 태어난 시간 형식이 올바르지 않습니다." },
+        {
+          error: "생년월일 또는 태어난 시간 형식이 올바르지 않습니다.",
+        },
         { status: 400 }
       );
     }
 
-    // 입력한 양력 생년월일시로 사주 계산
+    // 양력 생년월일시로 사주 계산
     const solar = Solar.fromYmdHms(
       year,
       month,
@@ -77,25 +116,26 @@ export async function POST(request: Request) {
       time: timePillar,
     };
 
-const fiveElementList = [
-  ...eightChar.getYearWuXing().split(""),
-  ...eightChar.getMonthWuXing().split(""),
-  ...eightChar.getDayWuXing().split(""),
-  ...eightChar.getTimeWuXing().split(""),
-];
+    // 오행 계산
+    const fiveElementList = [
+      ...eightChar.getYearWuXing().split(""),
+      ...eightChar.getMonthWuXing().split(""),
+      ...eightChar.getDayWuXing().split(""),
+      ...eightChar.getTimeWuXing().split(""),
+    ];
 
-const fiveElements = {
-  wood: fiveElementList.filter((item) => item === "木").length,
-  fire: fiveElementList.filter((item) => item === "火").length,
-  earth: fiveElementList.filter((item) => item === "土").length,
-  metal: fiveElementList.filter((item) => item === "金").length,
-  water: fiveElementList.filter((item) => item === "水").length,
-};
+    const fiveElements = {
+      wood: fiveElementList.filter((item) => item === "木").length,
+      fire: fiveElementList.filter((item) => item === "火").length,
+      earth: fiveElementList.filter((item) => item === "土").length,
+      metal: fiveElementList.filter((item) => item === "金").length,
+      water: fiveElementList.filter((item) => item === "水").length,
+    };
 
-const prompt = `
+    const prompt = `
 당신은 한국 전통 사주를 설명하는 AI 상담가입니다.
 
-사용자가 입력한 생년월일시와 실제 계산된 사주 원국을 바탕으로
+사용자가 입력한 생년월일시와 프로그램으로 계산된 사주 원국을 바탕으로
 재미와 자기성찰을 위한 사주 해석을 작성해주세요.
 
 미래를 확정적으로 단정하지 말고,
@@ -104,7 +144,7 @@ const prompt = `
 
 [입력 정보]
 - 생년월일: ${birthDate}
-- 태어난 시간: ${birthTime}
+- 태어난 시간: ${normalizedBirthTime}
 - 성별: ${gender}
 
 [계산된 사주 원국]
@@ -112,6 +152,13 @@ const prompt = `
 - 월주: ${monthPillar}
 - 일주: ${dayPillar}
 - 시주: ${timePillar}
+
+[오행]
+- 목: ${fiveElements.wood}
+- 화: ${fiveElements.fire}
+- 토: ${fiveElements.earth}
+- 금: ${fiveElements.metal}
+- 수: ${fiveElements.water}
 
 중요:
 위에 제공된 사주 원국은 프로그램으로 계산된 값입니다.
@@ -143,20 +190,22 @@ const prompt = `
 `;
 
     const response = await openai.responses.create({
-      model: "gpt-5.6-luna",
+      model: process.env.OPENAI_MODEL || "gpt-6-luna",
       input: prompt,
     });
 
     return NextResponse.json({
-  result: response.output_text,
-  fourPillars,
-  fiveElements,
-});
+      result: response.output_text || "",
+      fourPillars,
+      fiveElements,
+    });
   } catch (error) {
-    console.error(error);
+    console.error("saju api error:", error);
 
     return NextResponse.json(
-      { error: "AI 사주 분석 중 오류가 발생했습니다." },
+      {
+        error: "AI 사주 분석 중 오류가 발생했습니다.",
+      },
       { status: 500 }
     );
   }
