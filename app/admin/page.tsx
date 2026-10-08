@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { PRODUCTS, type ProductId } from "@/lib/products";
+import { PRODUCTS, type ProductId } from "../../lib/products";
 
 type Gender = "남성" | "여성" | "";
 type Pillars = {
