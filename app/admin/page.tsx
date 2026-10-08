@@ -985,11 +985,11 @@ function FourPillars({
   const value =
     data as Record<string, unknown> | null;
 
-  const items = [
-    ["년주", value?.year],
-    ["월주", value?.month],
-    ["일주", value?.day],
-    ["시주", value?.time],
+  const items: Array<[string, string]> = [
+    ["년주", String(value?.year ?? "-")],
+    ["월주", String(value?.month ?? "-")],
+    ["일주", String(value?.day ?? "-")],
+    ["시주", String(value?.time ?? "-")],
   ];
 
   return (
@@ -1009,7 +1009,7 @@ function FourPillars({
             </div>
 
             <div className="mt-3 text-2xl font-bold">
-              {String(item ?? "-")}
+              {item}
             </div>
           </div>
         ))}
@@ -1026,12 +1026,12 @@ function FiveElements({
   const value =
     data as Record<string, unknown> | null;
 
-  const items = [
-    ["木", value?.wood],
-    ["火", value?.fire],
-    ["土", value?.earth],
-    ["金", value?.metal],
-    ["水", value?.water],
+  const items: Array<[string, string]> = [
+    ["木", String(value?.wood ?? "0")],
+    ["火", String(value?.fire ?? "0")],
+    ["土", String(value?.earth ?? "0")],
+    ["金", String(value?.metal ?? "0")],
+    ["水", String(value?.water ?? "0")],
   ];
 
   return (
@@ -1051,7 +1051,7 @@ function FiveElements({
             </div>
 
             <div className="mt-2 text-xl font-bold">
-              {String(item ?? 0)}
+              {item}
             </div>
           </div>
         ))}
