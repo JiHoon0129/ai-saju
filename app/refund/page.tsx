@@ -1,5 +1,4 @@
-```tsx
-export default function RefundPage() {
+const RefundPage = () => {
   return (
     <main className="min-h-screen bg-white px-5 py-10 text-gray-900">
       <div className="mx-auto max-w-3xl">
@@ -52,8 +51,7 @@ export default function RefundPage() {
             <h2 className="mb-2 text-lg font-semibold">5. 환불 방법</h2>
             <p>
               환불이 승인된 경우 결제 수단 및 결제사의 정책에 따라 환불이
-              처리됩니다. 실제 환불 완료 시점은 결제수단에 따라 차이가
-              발생할 수 있습니다.
+              처리됩니다.
             </p>
           </div>
 
@@ -81,5 +79,6 @@ export default function RefundPage() {
       </div>
     </main>
   );
-}
-```
+};
+
+export default RefundPage;
