@@ -16,9 +16,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const normalizedTime = getStartTime(birthTime);
-    const [year, month, day] = String(birthDate).split("-").map(Number);
-    const [hour, minute] = normalizedTime.split(":").map(Number);
+    const normalizedTime = getStartTime(String(birthTime));
+
+    const [year, month, day] = String(birthDate)
+      .split("-")
+      .map(Number);
+
+    const [hour, minute] = normalizedTime
+      .split(":")
+      .map(Number);
 
     if (
       !Number.isInteger(year) ||
@@ -42,7 +48,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const solar = Solar.fromYmdHms(year, month, day, hour, minute, 0);
+    const solar = Solar.fromYmdHms(
+      year,
+      month,
+      day,
+      hour,
+      minute,
+      0
+    );
+
     const lunar = solar.getLunar();
     const eightChar = lunar.getEightChar();
 
@@ -68,14 +82,13 @@ export async function POST(request: Request) {
       water: fiveElementList.filter((item) => item === "水").length,
     };
 
-    // 중요: 이 API에서는 OpenAI를 호출하지 않습니다.
-    // 관리자 화면에서 상품을 선택하기 전에는 AI 분석이 실행되지 않습니다.
     return NextResponse.json({
       fourPillars,
       fiveElements,
     });
   } catch (error) {
     console.error("admin-saju error:", error);
+
     return NextResponse.json(
       { error: "관리자 만세력 계산 중 오류가 발생했습니다." },
       { status: 500 }
