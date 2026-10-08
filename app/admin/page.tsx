@@ -19,6 +19,8 @@ type FiveElements = {
   water: number;
 };
 
+type DeliveryMethod = "email" | "kakao" | "both";
+
 type PersonData = {
   email: string;
   birthDate: string;
@@ -29,9 +31,18 @@ type PersonData = {
 };
 
 const TIME_RANGES = [
-  "00:00~01:30", "01:30~03:30", "03:30~05:30", "05:30~07:30",
-  "07:30~09:30", "09:30~11:30", "11:30~13:30", "13:30~15:30",
-  "15:30~17:30", "17:30~19:30", "19:30~21:30", "21:30~22:30",
+  "00:00~01:30",
+  "01:30~03:30",
+  "03:30~05:30",
+  "05:30~07:30",
+  "07:30~09:30",
+  "09:30~11:30",
+  "11:30~13:30",
+  "13:30~15:30",
+  "15:30~17:30",
+  "17:30~19:30",
+  "19:30~21:30",
+  "21:30~22:30",
   "22:30~00:00",
 ];
 
@@ -46,7 +57,14 @@ export default function AdminPage() {
     gender: "남성",
   });
 
-  const [selectedProduct, setSelectedProduct] = useState<AdminProduct | null>(null);
+  const [selectedProduct, setSelectedProduct] =
+    useState<AdminProduct | null>(null);
+
+  const [deliveryMethod, setDeliveryMethod] =
+    useState<DeliveryMethod>("email");
+
+  const [kakaoContact, setKakaoContact] = useState("");
+
   const [partner, setPartner] = useState<PersonData>({
     email: "",
     birthDate: "",
@@ -55,19 +73,24 @@ export default function AdminPage() {
   });
 
   const [result, setResult] = useState("");
-  const [pdfStatus, setPdfStatus] = useState("");
   const [pillars, setPillars] = useState<FourPillars | null>(null);
   const [elements, setElements] = useState<FiveElements | null>(null);
-  const [partnerPillars, setPartnerPillars] = useState<FourPillars | null>(null);
-  const [partnerElements, setPartnerElements] = useState<FiveElements | null>(null);
+  const [partnerPillars, setPartnerPillars] =
+    useState<FourPillars | null>(null);
+  const [partnerElements, setPartnerElements] =
+    useState<FiveElements | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [error, setError] = useState("");
+  const [pdfStatus, setPdfStatus] = useState("");
 
   async function calculatePerson(person: PersonData) {
     const response = await fetch("/api/admin-saju", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         birthDate: person.birthDate,
         birthTime: person.birthTime,
@@ -92,8 +115,24 @@ export default function AdminPage() {
     setResult("");
     setPdfStatus("");
 
-    if (!customer.email || !customer.birthDate || !customer.birthTime) {
-      setError("고객 이메일, 생년월일, 태어난 시간을 모두 입력해주세요.");
+    if (!customer.birthDate || !customer.birthTime) {
+      setError("생년월일과 태어난 시간을 모두 입력해주세요.");
+      return;
+    }
+
+    if (
+      (deliveryMethod === "email" || deliveryMethod === "both") &&
+      !customer.email
+    ) {
+      setError("이메일 수신을 선택했다면 이메일 주소를 입력해주세요.");
+      return;
+    }
+
+    if (
+      (deliveryMethod === "kakao" || deliveryMethod === "both") &&
+      !kakaoContact
+    ) {
+      setError("카카오톡 수신을 선택했다면 카카오톡 수신 정보를 입력해주세요.");
       return;
     }
 
@@ -101,27 +140,80 @@ export default function AdminPage() {
 
     try {
       const data = await calculatePerson(customer);
+
       setPillars(data.fourPillars);
       setElements(data.fiveElements);
       setStep(2);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "계산 중 오류가 발생했습니다.");
+      setError(
+        e instanceof Error ? e.message : "계산 중 오류가 발생했습니다."
+      );
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleProductSelect(product: AdminProduct) {
+  function handleProductSelect(product: AdminProduct) {
     setError("");
     setResult("");
+    setPdfStatus("");
     setSelectedProduct(product);
+    setStep(3);
+  }
 
-    if (product.id !== "compatibility") {
-      setStep(3);
-      return;
+  async function generatePdf(analysisResult: string) {
+    if (!analysisResult.trim() || !selectedProduct) {
+      throw new Error("PDF로 만들 분석 결과가 없습니다.");
     }
 
-    setStep(3);
+    setPdfStatus("PDF 생성 중...");
+
+    const response = await fetch("/api/admin-pdf", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        result: analysisResult,
+        productName: selectedProduct.name,
+        birthDate: customer.birthDate,
+        birthTime: customer.birthTime,
+        gender: customer.gender,
+      }),
+    });
+
+    const contentType = response.headers.get("content-type") || "";
+
+    if (!response.ok || !contentType.includes("application/pdf")) {
+      let message = "PDF 생성에 실패했습니다.";
+
+      try {
+        const data = await response.json();
+        message = data.error || message;
+      } catch {}
+
+      throw new Error(message);
+    }
+
+    const blob = await response.blob();
+
+    if (!blob.size) {
+      throw new Error("생성된 PDF 파일이 비어 있습니다.");
+    }
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "ai-saju-result.pdf";
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+
+    setPdfStatus("PDF 생성 및 파일 준비 완료");
   }
 
   async function generateResult() {
@@ -141,19 +233,25 @@ export default function AdminPage() {
 
       if (selectedProduct.id === "compatibility") {
         if (!partner.birthDate || !partner.birthTime) {
-          throw new Error("궁합 분석은 상대방 생년월일과 태어난 시간을 입력해주세요.");
+          throw new Error(
+            "궁합 분석은 상대방 생년월일과 태어난 시간을 입력해주세요."
+          );
         }
 
         const partnerData = await calculatePerson(partner);
+
         currentPartnerPillars = partnerData.fourPillars;
         currentPartnerElements = partnerData.fiveElements;
+
         setPartnerPillars(currentPartnerPillars);
         setPartnerElements(currentPartnerElements);
       }
 
       const response = await fetch("/api/test-analysis", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           productId: selectedProduct.id,
           customer: {
@@ -174,50 +272,14 @@ export default function AdminPage() {
         throw new Error(data.error || "AI 분석 생성에 실패했습니다.");
       }
 
-      setResult(data.result);
-      setPdfStatus("AI 분석 완료 · PDF 생성 중...");
+      await generatePdf(data.result);
 
-      const pdfResponse = await fetch("/api/admin-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          result: data.result,
-          productName: selectedProduct.name,
-          birthDate: customer.birthDate,
-          birthTime: customer.birthTime,
-          gender: customer.gender,
-        }),
-      });
-
-      if (!pdfResponse.ok) {
-        let pdfError = "PDF 생성에 실패했습니다.";
-        try {
-          const pdfData = await pdfResponse.json();
-          pdfError = pdfData.error || pdfError;
-        } catch {
-          // PDF 오류 응답이 JSON이 아닌 경우 기본 메시지를 사용합니다.
-        }
-        throw new Error(pdfError);
-      }
-
-      const contentType = pdfResponse.headers.get("content-type") || "";
-      if (!contentType.includes("application/pdf")) {
-        throw new Error("PDF 파일 응답을 확인하지 못했습니다.");
-      }
-
-      const pdfBlob = await pdfResponse.blob();
-      const downloadUrl = URL.createObjectURL(pdfBlob);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = "ai-saju-result.pdf";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(downloadUrl);
-
-      setPdfStatus("AI 분석 완료 · PDF 생성 완료 · 파일 다운로드 완료");
+      setResult("완료");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "분석 생성 중 오류가 발생했습니다.");
+      setError(
+        e instanceof Error ? e.message : "분석 생성 중 오류가 발생했습니다."
+      );
+      setPdfStatus("");
     } finally {
       setLoading(false);
     }
@@ -230,20 +292,26 @@ export default function AdminPage() {
       birthTime: "",
       gender: "남성",
     });
+
     setSelectedProduct(null);
+    setDeliveryMethod("email");
+    setKakaoContact("");
+
     setPartner({
       email: "",
       birthDate: "",
       birthTime: "",
       gender: "여성",
     });
+
     setPillars(null);
     setElements(null);
     setPartnerPillars(null);
     setPartnerElements(null);
+
     setResult("");
-    setPdfStatus("");
     setError("");
+    setPdfStatus("");
     setStep(1);
   }
 
@@ -269,10 +337,16 @@ export default function AdminPage() {
           <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1 }}>
             ADMIN TEST MODE
           </div>
-          <h1 style={{ margin: "8px 0", fontSize: 30 }}>사주 관리자 분석실</h1>
+
+          <h1 style={{ margin: "8px 0", fontSize: 30 }}>
+            사주 관리자 분석실
+          </h1>
+
           <p style={{ margin: 0, opacity: 0.8 }}>
-            고객 정보를 입력하고 상품을 선택한 뒤 해당 상품의 테스트 결과만 생성합니다.
+            고객 정보를 입력하고 상품을 선택한 뒤 해당 상품의 테스트 결과만
+            생성합니다.
           </p>
+
           <div
             style={{
               marginTop: 16,
@@ -308,19 +382,55 @@ export default function AdminPage() {
         {step === 1 && (
           <section style={cardStyle}>
             <StepTitle number="1" title="고객 기본 정보" />
+
             <div style={gridStyle}>
               <label>
-                고객 이메일
-                <input
+                결과 수신 방법
+                <select
                   style={inputStyle}
-                  type="email"
-                  value={customer.email}
+                  value={deliveryMethod}
                   onChange={(e) =>
-                    setCustomer({ ...customer, email: e.target.value })
+                    setDeliveryMethod(e.target.value as DeliveryMethod)
                   }
-                  placeholder="customer@example.com"
-                />
+                >
+                  <option value="email">이메일</option>
+                  <option value="kakao">카카오톡</option>
+                  <option value="both">이메일 + 카카오톡</option>
+                </select>
               </label>
+
+              {(deliveryMethod === "email" ||
+                deliveryMethod === "both") && (
+                <label>
+                  이메일 주소
+                  <input
+                    style={inputStyle}
+                    type="email"
+                    value={customer.email}
+                    onChange={(e) =>
+                      setCustomer({
+                        ...customer,
+                        email: e.target.value,
+                      })
+                    }
+                    placeholder="customer@example.com"
+                  />
+                </label>
+              )}
+
+              {(deliveryMethod === "kakao" ||
+                deliveryMethod === "both") && (
+                <label>
+                  카카오톡 수신 정보
+                  <input
+                    style={inputStyle}
+                    type="text"
+                    value={kakaoContact}
+                    onChange={(e) => setKakaoContact(e.target.value)}
+                    placeholder="카카오톡 수신 정보"
+                  />
+                </label>
+              )}
 
               <label>
                 생년월일
@@ -329,7 +439,10 @@ export default function AdminPage() {
                   type="date"
                   value={customer.birthDate}
                   onChange={(e) =>
-                    setCustomer({ ...customer, birthDate: e.target.value })
+                    setCustomer({
+                      ...customer,
+                      birthDate: e.target.value,
+                    })
                   }
                 />
               </label>
@@ -340,10 +453,14 @@ export default function AdminPage() {
                   style={inputStyle}
                   value={customer.birthTime}
                   onChange={(e) =>
-                    setCustomer({ ...customer, birthTime: e.target.value })
+                    setCustomer({
+                      ...customer,
+                      birthTime: e.target.value,
+                    })
                   }
                 >
                   <option value="">시간 선택</option>
+
                   {TIME_RANGES.map((time) => (
                     <option key={time} value={time}>
                       {time}
@@ -370,7 +487,11 @@ export default function AdminPage() {
               </label>
             </div>
 
-            <button style={primaryButton} onClick={handleCustomerCalculate} disabled={loading}>
+            <button
+              style={primaryButton}
+              onClick={handleCustomerCalculate}
+              disabled={loading}
+            >
               {loading ? "만세력 계산 중..." : "다음 → 만세력 계산"}
             </button>
           </section>
@@ -379,6 +500,7 @@ export default function AdminPage() {
         {step >= 2 && pillars && elements && (
           <section style={cardStyle}>
             <StepTitle number="2" title="계산된 사주 원국" />
+
             <div style={pillarGrid}>
               <InfoBox title="년주" value={pillars.year} />
               <InfoBox title="월주" value={pillars.month} />
@@ -388,6 +510,7 @@ export default function AdminPage() {
 
             <div style={{ marginTop: 16 }}>
               <strong>오행</strong>
+
               <div style={elementGrid}>
                 <InfoBox title="木" value={`${elements.wood}`} />
                 <InfoBox title="火" value={`${elements.fire}`} />
@@ -416,9 +539,15 @@ export default function AdminPage() {
                             : "1px solid #e5e7eb",
                       }}
                     >
-                      <div style={{ fontSize: 18, fontWeight: 900 }}>
+                      <div
+                        style={{
+                          fontSize: 18,
+                          fontWeight: 900,
+                        }}
+                      >
                         {product.name}
                       </div>
+
                       <div
                         style={{
                           fontSize: 22,
@@ -428,7 +557,14 @@ export default function AdminPage() {
                       >
                         {formatPrice(product.price)}
                       </div>
-                      <div style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.5 }}>
+
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#6b7280",
+                          lineHeight: 1.5,
+                        }}
+                      >
                         {product.description}
                       </div>
                     </button>
@@ -451,13 +587,30 @@ export default function AdminPage() {
                 marginBottom: 18,
               }}
             >
-              <div style={{ fontWeight: 900, fontSize: 20 }}>
+              <div
+                style={{
+                  fontWeight: 900,
+                  fontSize: 20,
+                }}
+              >
                 {selectedProduct.name}
               </div>
-              <div style={{ fontWeight: 800, marginTop: 4 }}>
+
+              <div
+                style={{
+                  fontWeight: 800,
+                  marginTop: 4,
+                }}
+              >
                 {formatPrice(selectedProduct.price)}
               </div>
-              <div style={{ color: "#6b7280", marginTop: 6 }}>
+
+              <div
+                style={{
+                  color: "#6b7280",
+                  marginTop: 6,
+                }}
+              >
                 {selectedProduct.description}
               </div>
             </div>
@@ -472,6 +625,7 @@ export default function AdminPage() {
                 }}
               >
                 <h3 style={{ marginTop: 0 }}>상대방 정보</h3>
+
                 <div style={gridStyle}>
                   <label>
                     상대방 이메일(선택)
@@ -480,7 +634,10 @@ export default function AdminPage() {
                       type="email"
                       value={partner.email}
                       onChange={(e) =>
-                        setPartner({ ...partner, email: e.target.value })
+                        setPartner({
+                          ...partner,
+                          email: e.target.value,
+                        })
                       }
                     />
                   </label>
@@ -492,7 +649,10 @@ export default function AdminPage() {
                       type="date"
                       value={partner.birthDate}
                       onChange={(e) =>
-                        setPartner({ ...partner, birthDate: e.target.value })
+                        setPartner({
+                          ...partner,
+                          birthDate: e.target.value,
+                        })
                       }
                     />
                   </label>
@@ -503,10 +663,14 @@ export default function AdminPage() {
                       style={inputStyle}
                       value={partner.birthTime}
                       onChange={(e) =>
-                        setPartner({ ...partner, birthTime: e.target.value })
+                        setPartner({
+                          ...partner,
+                          birthTime: e.target.value,
+                        })
                       }
                     >
                       <option value="">시간 선택</option>
+
                       {TIME_RANGES.map((time) => (
                         <option key={time} value={time}>
                           {time}
@@ -535,23 +699,39 @@ export default function AdminPage() {
               </div>
             )}
 
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
               <button
                 style={secondaryButton}
                 onClick={() => {
                   setStep(2);
                   setResult("");
                   setError("");
+                  setPdfStatus("");
                 }}
               >
                 상품 다시 선택
               </button>
 
-              <button style={primaryButton} onClick={generateResult} disabled={loading}>
-                {loading ? "선택 상품 분석 생성 중..." : "선택 상품 테스트 분석 생성"}
+              <button
+                style={primaryButton}
+                onClick={generateResult}
+                disabled={loading}
+              >
+                {loading
+                  ? "AI 분석 및 PDF 생성 중..."
+                  : "선택 상품 테스트 분석 생성"}
               </button>
 
-              <button style={secondaryButton} onClick={resetAll}>
+              <button
+                style={secondaryButton}
+                onClick={resetAll}
+              >
                 처음부터
               </button>
             </div>
@@ -564,23 +744,37 @@ export default function AdminPage() {
                   paddingTop: 24,
                 }}
               >
-                <h2 style={{ fontSize: 22 }}>처리 상태</h2>
                 <div
                   style={{
                     background: "#f0fdf4",
                     border: "1px solid #bbf7d0",
-                    color: "#166534",
                     borderRadius: 14,
-                    padding: 18,
-                    fontWeight: 800,
-                    lineHeight: 1.7,
+                    padding: 20,
+                    color: "#166534",
                   }}
                 >
-                  {pdfStatus || "AI 분석이 완료되었습니다."}
+                  <div
+                    style={{
+                      fontSize: 20,
+                      fontWeight: 900,
+                    }}
+                  >
+                    분석 처리 완료
+                  </div>
+
+                  <div style={{ marginTop: 8 }}>
+                    AI 분석이 생성되었고 PDF 파일이 정상적으로 준비되었습니다.
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 6,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {pdfStatus}
+                  </div>
                 </div>
-                <p style={{ margin: "12px 0 0", color: "#6b7280", fontSize: 13 }}>
-                  분석 전문은 관리자 화면에 표시하지 않고 PDF 파일로 처리합니다.
-                </p>
               </div>
             )}
           </section>
@@ -590,9 +784,22 @@ export default function AdminPage() {
   );
 }
 
-function StepTitle({ number, title }: { number: string; title: string }) {
+function StepTitle({
+  number,
+  title,
+}: {
+  number: string;
+  title: string;
+}) {
   return (
-    <h2 style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 0 }}>
+    <h2
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        marginTop: 0,
+      }}
+    >
       <span
         style={{
           width: 32,
@@ -608,12 +815,19 @@ function StepTitle({ number, title }: { number: string; title: string }) {
       >
         {number}
       </span>
+
       {title}
     </h2>
   );
 }
 
-function InfoBox({ title, value }: { title: string; value: string }) {
+function InfoBox({
+  title,
+  value,
+}: {
+  title: string;
+  value: string;
+}) {
   return (
     <div
       style={{
@@ -624,8 +838,24 @@ function InfoBox({ title, value }: { title: string; value: string }) {
         textAlign: "center",
       }}
     >
-      <div style={{ color: "#6b7280", fontSize: 12 }}>{title}</div>
-      <div style={{ fontSize: 20, fontWeight: 900, marginTop: 4 }}>{value}</div>
+      <div
+        style={{
+          color: "#6b7280",
+          fontSize: 12,
+        }}
+      >
+        {title}
+      </div>
+
+      <div
+        style={{
+          fontSize: 20,
+          fontWeight: 900,
+          marginTop: 4,
+        }}
+      >
+        {value}
+      </div>
     </div>
   );
 }
