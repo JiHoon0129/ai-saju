@@ -1,4 +1,3 @@
-
 export type AdminProductId =
   | "free"
   | "love"
