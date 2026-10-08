@@ -19,8 +19,6 @@ type FiveElements = {
   water: number;
 };
 
-type DeliveryMethod = "email" | "kakao" | "both";
-
 type PersonData = {
   email: string;
   birthDate: string;
@@ -49,8 +47,6 @@ export default function AdminPage() {
   });
 
   const [selectedProduct, setSelectedProduct] = useState<AdminProduct | null>(null);
-  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("email");
-  const [kakaoContact, setKakaoContact] = useState("");
   const [partner, setPartner] = useState<PersonData>({
     email: "",
     birthDate: "",
@@ -59,6 +55,7 @@ export default function AdminPage() {
   });
 
   const [result, setResult] = useState("");
+  const [pdfStatus, setPdfStatus] = useState("");
   const [pillars, setPillars] = useState<FourPillars | null>(null);
   const [elements, setElements] = useState<FiveElements | null>(null);
   const [partnerPillars, setPartnerPillars] = useState<FourPillars | null>(null);
@@ -93,19 +90,10 @@ export default function AdminPage() {
   async function handleCustomerCalculate() {
     setError("");
     setResult("");
+    setPdfStatus("");
 
-    if (!customer.birthDate || !customer.birthTime) {
-      setError("생년월일과 태어난 시간을 모두 입력해주세요.");
-      return;
-    }
-
-    if ((deliveryMethod === "email" || deliveryMethod === "both") && !customer.email) {
-      setError("이메일 주소를 입력해주세요.");
-      return;
-    }
-
-    if ((deliveryMethod === "kakao" || deliveryMethod === "both") && !kakaoContact) {
-      setError("카카오톡 수신 정보를 입력해주세요.");
+    if (!customer.email || !customer.birthDate || !customer.birthTime) {
+      setError("고객 이메일, 생년월일, 태어난 시간을 모두 입력해주세요.");
       return;
     }
 
@@ -144,6 +132,7 @@ export default function AdminPage() {
 
     setError("");
     setResult("");
+    setPdfStatus("");
     setLoading(true);
 
     try {
@@ -186,6 +175,47 @@ export default function AdminPage() {
       }
 
       setResult(data.result);
+      setPdfStatus("AI 분석 완료 · PDF 생성 중...");
+
+      const pdfResponse = await fetch("/api/admin-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          result: data.result,
+          productName: selectedProduct.name,
+          birthDate: customer.birthDate,
+          birthTime: customer.birthTime,
+          gender: customer.gender,
+        }),
+      });
+
+      if (!pdfResponse.ok) {
+        let pdfError = "PDF 생성에 실패했습니다.";
+        try {
+          const pdfData = await pdfResponse.json();
+          pdfError = pdfData.error || pdfError;
+        } catch {
+          // PDF 오류 응답이 JSON이 아닌 경우 기본 메시지를 사용합니다.
+        }
+        throw new Error(pdfError);
+      }
+
+      const contentType = pdfResponse.headers.get("content-type") || "";
+      if (!contentType.includes("application/pdf")) {
+        throw new Error("PDF 파일 응답을 확인하지 못했습니다.");
+      }
+
+      const pdfBlob = await pdfResponse.blob();
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = "ai-saju-result.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(downloadUrl);
+
+      setPdfStatus("AI 분석 완료 · PDF 생성 완료 · 파일 다운로드 완료");
     } catch (e) {
       setError(e instanceof Error ? e.message : "분석 생성 중 오류가 발생했습니다.");
     } finally {
@@ -201,8 +231,6 @@ export default function AdminPage() {
       gender: "남성",
     });
     setSelectedProduct(null);
-    setDeliveryMethod("email");
-    setKakaoContact("");
     setPartner({
       email: "",
       birthDate: "",
@@ -214,6 +242,7 @@ export default function AdminPage() {
     setPartnerPillars(null);
     setPartnerElements(null);
     setResult("");
+    setPdfStatus("");
     setError("");
     setStep(1);
   }
@@ -278,59 +307,20 @@ export default function AdminPage() {
 
         {step === 1 && (
           <section style={cardStyle}>
-            <StepTitle number="1" title="고객 기본 정보 및 결과 수신 방법" />
+            <StepTitle number="1" title="고객 기본 정보" />
             <div style={gridStyle}>
-              <label style={{ gridColumn: "1 / -1" }}>
-                결과 받을 방법
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, marginTop: 7 }}>
-                  {([
-                    ["email", "📧 이메일"],
-                    ["kakao", "💬 카카오톡"],
-                    ["both", "📧 + 💬 둘 다"],
-                  ] as const).map(([value, label]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setDeliveryMethod(value)}
-                      style={{
-                        ...secondaryButton,
-                        border: deliveryMethod === value ? "2px solid #111827" : "1px solid #d1d5db",
-                        background: deliveryMethod === value ? "#f3f4f6" : "#fff",
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
+              <label>
+                고객 이메일
+                <input
+                  style={inputStyle}
+                  type="email"
+                  value={customer.email}
+                  onChange={(e) =>
+                    setCustomer({ ...customer, email: e.target.value })
+                  }
+                  placeholder="customer@example.com"
+                />
               </label>
-
-              {(deliveryMethod === "email" || deliveryMethod === "both") && (
-                <label>
-                  결과 받을 이메일
-                  <input
-                    style={inputStyle}
-                    type="email"
-                    value={customer.email}
-                    onChange={(e) =>
-                      setCustomer({ ...customer, email: e.target.value })
-                    }
-                    placeholder="customer@example.com"
-                  />
-                </label>
-              )}
-
-              {(deliveryMethod === "kakao" || deliveryMethod === "both") && (
-                <label>
-                  카카오톡 수신 정보
-                  <input
-                    style={inputStyle}
-                    type="text"
-                    value={kakaoContact}
-                    onChange={(e) => setKakaoContact(e.target.value)}
-                    placeholder="카카오톡 수신 정보"
-                  />
-                </label>
-              )}
 
               <label>
                 생년월일
@@ -574,19 +564,23 @@ export default function AdminPage() {
                   paddingTop: 24,
                 }}
               >
-                <h2 style={{ fontSize: 22 }}>분석 결과</h2>
+                <h2 style={{ fontSize: 22 }}>처리 상태</h2>
                 <div
                   style={{
-                    whiteSpace: "pre-wrap",
-                    lineHeight: 1.8,
-                    background: "#fafafa",
-                    border: "1px solid #e5e7eb",
+                    background: "#f0fdf4",
+                    border: "1px solid #bbf7d0",
+                    color: "#166534",
                     borderRadius: 14,
-                    padding: 20,
+                    padding: 18,
+                    fontWeight: 800,
+                    lineHeight: 1.7,
                   }}
                 >
-                  {result}
+                  {pdfStatus || "AI 분석이 완료되었습니다."}
                 </div>
+                <p style={{ margin: "12px 0 0", color: "#6b7280", fontSize: 13 }}>
+                  분석 전문은 관리자 화면에 표시하지 않고 PDF 파일로 처리합니다.
+                </p>
               </div>
             )}
           </section>
