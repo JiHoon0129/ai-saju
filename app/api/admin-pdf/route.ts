@@ -1,100 +1,81 @@
 import { NextResponse } from "next/server";
 
-type PdfLine =
-  | {
-      type: "title";
-      text: string;
-    }
-  | {
-      type: "meta";
-      text: string;
-    }
-  | {
-      type: "section";
-      text: string;
-      color: [number, number, number];
-    }
-  | {
-      type: "body";
-      text: string;
-    }
-  | {
-      type: "highlight";
-      text: string;
-      color: [number, number, number];
-    }
-  | {
-      type: "notice";
-      text: string;
-    };
-
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
 
-const MARGIN_LEFT = 52;
-const MARGIN_RIGHT = 52;
-const TOP_MARGIN = 54;
-const BOTTOM_MARGIN = 52;
+const MARGIN_LEFT = 50;
+const MARGIN_RIGHT = 50;
+const TOP_Y = 785;
+const BOTTOM_Y = 55;
 
-const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
+const TITLE_SIZE = 18;
+const BODY_SIZE = 10.5;
+const LINE_HEIGHT = 18;
 
-const BODY_FONT_SIZE = 10.5;
-const BODY_LINE_HEIGHT = 17;
+const MAX_CHARS_PER_LINE = 42;
+const MAX_LINES_PER_PAGE = 39;
 
-const SECTION_COLORS: [number, number, number][] = [
-  [0.25, 0.38, 0.72],
-  [0.58, 0.31, 0.65],
-  [0.82, 0.42, 0.28],
-  [0.18, 0.55, 0.47],
-  [0.72, 0.48, 0.20],
-  [0.36, 0.43, 0.62],
-  [0.67, 0.36, 0.47],
-  [0.30, 0.52, 0.65],
-];
+function utf16Hex(text: string) {
+  const bytes: number[] = [];
 
-function cleanMarkdown(text: string) {
+  for (const char of text) {
+    const codePoint = char.codePointAt(0) ?? 0;
+
+    if (codePoint <= 0xffff) {
+      bytes.push(
+        (codePoint >> 8) & 0xff,
+        codePoint & 0xff
+      );
+    } else {
+      const value = codePoint - 0x10000;
+
+      const high =
+        0xd800 + (value >> 10);
+
+      const low =
+        0xdc00 + (value & 0x3ff);
+
+      bytes.push(
+        (high >> 8) & 0xff,
+        high & 0xff,
+        (low >> 8) & 0xff,
+        low & 0xff
+      );
+    }
+  }
+
+  return bytes
+    .map((byte) =>
+      byte.toString(16).padStart(2, "0")
+    )
+    .join("");
+}
+
+function pdfText(text: string) {
+  return `<${utf16Hex(text)}>`;
+}
+
+function cleanText(text: string) {
   return text
-    .trim()
-    .replace(/^#{1,6}\s*/g, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
     .replace(/\*\*(.*?)\*\*/g, "$1")
     .replace(/__(.*?)__/g, "$1")
-    .replace(/`([^`]+)`/g, "$1")
-    .replace(/^[-*•]\s+/g, "")
-    .replace(/^>\s*/g, "")
+    .replace(/`(.*?)`/g, "$1")
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/^[•●▪◦]\s*/gm, "• ")
     .trim();
 }
 
-function isSectionHeading(text: string) {
-  return /^\d+[\.\)]\s+/.test(text);
-}
-
-function isHighlight(text: string) {
-  const value = text.trim();
-
-  return (
-    value.startsWith("예를 들어") ||
-    value.startsWith("예를 들면") ||
-    value.startsWith("중요합니다") ||
-    value.startsWith("핵심") ||
-    value.startsWith("기억할") ||
-    value.startsWith("한 줄 총평") ||
-    value.startsWith("한마디로") ||
-    value.startsWith("포인트")
-  );
-}
-
-function isNotice(text: string) {
-  const value = text.trim();
-
-  return (
-    value.startsWith("※") ||
-    value.startsWith("주의") ||
-    value.startsWith("참고")
-  );
-}
-
-function wrapText(text: string, maxChars: number) {
+function splitLongLine(
+  text: string,
+  maxChars = MAX_CHARS_PER_LINE
+) {
   const result: string[] = [];
+
+  if (!text) {
+    return [""];
+  }
 
   let current = "";
 
@@ -107,369 +88,123 @@ function wrapText(text: string, maxChars: number) {
     }
   }
 
-  if (current.trim()) {
+  if (current) {
     result.push(current);
   }
 
-  return result.length ? result : [""];
+  return result;
 }
 
-function buildPdfLines(params: {
-  result: string;
-  productName?: string;
-  birthDate?: string;
-  birthTime?: string;
-  gender?: string;
-}) {
-  const {
-    result,
-    productName,
-    birthDate,
-    birthTime,
-    gender,
-  } = params;
+function makeTextLines(text: string) {
+  const cleaned = cleanText(text);
 
-  const lines: PdfLine[] = [];
+  const result: string[] = [];
 
-  lines.push({
-    type: "title",
-    text: "AI 사주 분석 리포트",
-  });
-
-  if (productName) {
-    lines.push({
-      type: "meta",
-      text: `분석 상품  ·  ${productName}`,
-    });
-  }
-
-  if (birthDate) {
-    lines.push({
-      type: "meta",
-      text: `생년월일  ·  ${birthDate}`,
-    });
-  }
-
-  if (birthTime) {
-    lines.push({
-      type: "meta",
-      text: `출생시간  ·  ${birthTime}`,
-    });
-  }
-
-  if (gender) {
-    lines.push({
-      type: "meta",
-      text: `성별  ·  ${gender}`,
-    });
-  }
-
-  lines.push({
-    type: "notice",
-    text: "이 리포트는 사주 원국과 오행을 바탕으로 자기이해를 돕기 위한 콘텐츠입니다.",
-  });
-
-  lines.push({
-    type: "body",
-    text: "",
-  });
-
-  const rawLines = result
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .split("\n");
-
-  let sectionIndex = 0;
-
-  for (const rawLine of rawLines) {
-    const cleaned = cleanMarkdown(rawLine);
-
-    if (!cleaned) {
-      lines.push({
-        type: "body",
-        text: "",
-      });
+  for (const paragraph of cleaned.split("\n")) {
+    if (!paragraph.trim()) {
+      result.push("");
       continue;
     }
 
-    if (isSectionHeading(cleaned)) {
-      const color =
-        SECTION_COLORS[sectionIndex % SECTION_COLORS.length];
+    const parts =
+      splitLongLine(paragraph);
 
-      lines.push({
-        type: "section",
-        text: cleaned,
-        color,
-      });
-
-      sectionIndex += 1;
-      continue;
-    }
-
-    if (isHighlight(cleaned)) {
-      const color =
-        SECTION_COLORS[
-          Math.max(sectionIndex - 1, 0) % SECTION_COLORS.length
-        ];
-
-      lines.push({
-        type: "highlight",
-        text: cleaned,
-        color,
-      });
-
-      continue;
-    }
-
-    if (isNotice(cleaned)) {
-      lines.push({
-        type: "notice",
-        text: cleaned,
-      });
-
-      continue;
-    }
-
-    const wrapped = wrapText(cleaned, 34);
-
-    for (const line of wrapped) {
-      lines.push({
-        type: "body",
-        text: line,
-      });
-    }
+    result.push(...parts);
   }
 
-  return lines;
+  return result;
 }
 
-function estimateLineHeight(line: PdfLine) {
-  switch (line.type) {
-    case "title":
-      return 42;
-
-    case "meta":
-      return 19;
-
-    case "section":
-      return 39;
-
-    case "highlight":
-      return 48;
-
-    case "notice":
-      return 34;
-
-    case "body":
-      return line.text ? BODY_LINE_HEIGHT : 10;
-
-    default:
-      return BODY_LINE_HEIGHT;
-  }
-}
-
-function makePages(lines: PdfLine[]) {
-  const pages: PdfLine[][] = [];
-
-  let currentPage: PdfLine[] = [];
-  let currentHeight = TOP_MARGIN;
-
-  for (const line of lines) {
-    const lineHeight = estimateLineHeight(line);
-
-    if (
-      currentPage.length > 0 &&
-      currentHeight + lineHeight >
-        PAGE_HEIGHT - BOTTOM_MARGIN
-    ) {
-      pages.push(currentPage);
-      currentPage = [];
-      currentHeight = TOP_MARGIN;
-    }
-
-    currentPage.push(line);
-    currentHeight += lineHeight;
-  }
-
-  if (currentPage.length > 0) {
-    pages.push(currentPage);
-  }
-
-  return pages;
-}
-
-function escapePdfText(text: string) {
+function escapeLiteral(text: string) {
   return text
     .replace(/\\/g, "\\\\")
     .replace(/\(/g, "\\(")
     .replace(/\)/g, "\\)");
 }
 
-function colorCommand(color: [number, number, number]) {
-  return `${color[0]} ${color[1]} ${color[2]} rg`;
-}
-
 function buildPageContent(
-  lines: PdfLine[],
+  title: string,
+  lines: string[],
   pageNumber: number,
   totalPages: number
 ) {
   const commands: string[] = [];
 
-  let y = PAGE_HEIGHT - TOP_MARGIN;
-
   commands.push("q");
 
-  // 상단 장식선
-  commands.push("0.92 0.94 0.98 rg");
+  // 흰색 배경
+  commands.push("1 1 1 rg");
   commands.push(
-    `${MARGIN_LEFT} ${y + 10} ${CONTENT_WIDTH} 2 re`
+    `0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT} re`
   );
   commands.push("f");
 
+  // 제목 영역
+  commands.push("0.07 0.09 0.15 rg");
+  commands.push(
+    `0 ${PAGE_HEIGHT - 72} ${PAGE_WIDTH} 72 re`
+  );
+  commands.push("f");
+
+  commands.push("BT");
+  commands.push("/F1 18 Tf");
+  commands.push("1 1 1 rg");
+  commands.push(
+    `50 ${PAGE_HEIGHT - 45} Td`
+  );
+  commands.push(
+    `${pdfText(title)} Tj`
+  );
+  commands.push("ET");
+
+  // 본문
+  let y = TOP_Y - 25;
+
   for (const line of lines) {
-    if (line.type === "title") {
-      y -= 7;
+    if (y < BOTTOM_Y + 25) {
+      break;
+    }
 
-      commands.push("0.12 0.15 0.22 rg");
-      commands.push("BT");
-      commands.push("/F2 21 Tf");
-      commands.push(`${MARGIN_LEFT} ${y} Td`);
-      commands.push(`(${escapePdfText(line.text)}) Tj`);
-      commands.push("ET");
-
-      y -= 35;
+    if (!line.trim()) {
+      y -= LINE_HEIGHT / 2;
       continue;
     }
 
-    if (line.type === "meta") {
-      commands.push("0.35 0.38 0.45 rg");
-      commands.push("BT");
-      commands.push("/F1 9 Tf");
-      commands.push(`${MARGIN_LEFT} ${y} Td`);
-      commands.push(`(${escapePdfText(line.text)}) Tj`);
-      commands.push("ET");
+    commands.push("BT");
+    commands.push(
+      `/F1 ${BODY_SIZE} Tf`
+    );
+    commands.push("0.12 0.12 0.12 rg");
+    commands.push(
+      `${MARGIN_LEFT} ${y} Td`
+    );
+    commands.push(
+      `${pdfText(line)} Tj`
+    );
+    commands.push("ET");
 
-      y -= 18;
-      continue;
-    }
-
-    if (line.type === "notice") {
-      const boxHeight = 25;
-
-      y -= 4;
-
-      commands.push("0.96 0.97 0.99 rg");
-      commands.push(
-        `${MARGIN_LEFT} ${y - 6} ${CONTENT_WIDTH} ${boxHeight} re`
-      );
-      commands.push("f");
-
-      commands.push("0.40 0.43 0.50 rg");
-      commands.push("BT");
-      commands.push("/F1 8.5 Tf");
-      commands.push(`${MARGIN_LEFT + 10} ${y + 3} Td`);
-      commands.push(`(${escapePdfText(line.text)}) Tj`);
-      commands.push("ET");
-
-      y -= 31;
-      continue;
-    }
-
-    if (line.type === "section") {
-      y -= 6;
-
-      // 왼쪽 컬러 바
-      commands.push(colorCommand(line.color));
-      commands.push(
-        `${MARGIN_LEFT} ${y - 6} 5 27 re`
-      );
-      commands.push("f");
-
-      // 제목 배경
-      commands.push(
-        `${line.color[0]} ${line.color[1]} ${line.color[2]} 0.08 rg`
-      );
-      commands.push(
-        `${MARGIN_LEFT + 5} ${y - 6} ${CONTENT_WIDTH - 5} 27 re`
-      );
-      commands.push("f");
-
-      // 제목
-      commands.push(colorCommand(line.color));
-      commands.push("BT");
-      commands.push("/F2 13 Tf");
-      commands.push(`${MARGIN_LEFT + 15} ${y + 2} Td`);
-      commands.push(`(${escapePdfText(line.text)}) Tj`);
-      commands.push("ET");
-
-      y -= 36;
-      continue;
-    }
-
-    if (line.type === "highlight") {
-      const boxHeight = 34;
-
-      y -= 4;
-
-      commands.push(
-        `${line.color[0]} ${line.color[1]} ${line.color[2]} 0.10 rg`
-      );
-
-      commands.push(
-        `${MARGIN_LEFT} ${y - 7} ${CONTENT_WIDTH} ${boxHeight} re`
-      );
-      commands.push("f");
-
-      commands.push(colorCommand(line.color));
-      commands.push(
-        `${MARGIN_LEFT} ${y - 7} 4 ${boxHeight} re`
-      );
-      commands.push("f");
-
-      const wrapped = wrapText(line.text, 31);
-
-      let localY = y + 4;
-
-      for (const textLine of wrapped.slice(0, 2)) {
-        commands.push("BT");
-        commands.push("/F2 9.5 Tf");
-        commands.push(`${MARGIN_LEFT + 13} ${localY} Td`);
-        commands.push(`(${escapePdfText(textLine)}) Tj`);
-        commands.push("ET");
-
-        localY -= 14;
-      }
-
-      y -= boxHeight + 8;
-      continue;
-    }
-
-    if (line.type === "body") {
-      if (!line.text) {
-        y -= 7;
-        continue;
-      }
-
-      commands.push("0.16 0.18 0.23 rg");
-      commands.push("BT");
-      commands.push(`/F1 ${BODY_FONT_SIZE} Tf`);
-      commands.push(`${MARGIN_LEFT} ${y} Td`);
-      commands.push(`(${escapePdfText(line.text)}) Tj`);
-      commands.push("ET");
-
-      y -= BODY_LINE_HEIGHT;
-    }
+    y -= LINE_HEIGHT;
   }
 
-  // 페이지 번호
-  commands.push("0.55 0.57 0.62 rg");
+  // 페이지 하단
+  commands.push("0.55 0.55 0.55 RG");
+  commands.push(
+    `${MARGIN_LEFT} 38 m ${
+      PAGE_WIDTH - MARGIN_RIGHT
+    } 38 l S`
+  );
+
   commands.push("BT");
   commands.push("/F1 8 Tf");
-  commands.push(`${PAGE_WIDTH - 95} 25 Td`);
+  commands.push("0.45 0.45 0.45 rg");
+  commands.push("50 24 Td");
+
   commands.push(
-    `(${pageNumber} / ${totalPages}) Tj`
+    `${pdfText(
+      `AI 사주 분석 리포트  ·  ${pageNumber} / ${totalPages}`
+    )} Tj`
   );
+
   commands.push("ET");
 
   commands.push("Q");
@@ -477,146 +212,323 @@ function buildPageContent(
   return commands.join("\n");
 }
 
-function buildPdf(pages: PdfLine[][]) {
+function makeObjects(
+  pages: string[][]
+) {
   const objects: string[] = [];
 
-  objects.push("<< /Type /Catalog /Pages 2 0 R >>");
+  // 1 Catalog
+  objects.push(
+    `<< /Type /Catalog /Pages 2 0 R >>`
+  );
 
+  // 2 Pages
   const pageObjectNumbers: number[] = [];
 
-  const fontRegularNumber = 3;
-  const fontBoldNumber = 4;
-
-  let nextObjectNumber = 5;
+  // 3 이후 페이지 객체
+  let nextObject = 3;
 
   for (let i = 0; i < pages.length; i++) {
-    pageObjectNumbers.push(nextObjectNumber);
-    nextObjectNumber += 2;
+    pageObjectNumbers.push(nextObject);
+    nextObject += 1;
   }
 
-  objects.push(
-    `<< /Type /Pages /Kids [${pageObjectNumbers
-      .map((n) => `${n} 0 R`)
-      .join(" ")}] /Count ${pages.length} >>`
-  );
+  const kids = pageObjectNumbers
+    .map((number) => `${number} 0 R`)
+    .join(" ");
 
   objects.push(
-    "<< /Type /Font /Subtype /Type0 /BaseFont /HYSMyeongJo-Medium /Encoding /UniKS-UCS2-H >>"
+    `<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>`
   );
 
-  objects.push(
-    "<< /Type /Font /Subtype /Type0 /BaseFont /HYSMyeongJo-Medium /Encoding /UniKS-UCS2-H >>"
-  );
-
+  // 페이지 객체
   for (let i = 0; i < pages.length; i++) {
-    const pageNumber = pageObjectNumbers[i];
-    const contentNumber = pageNumber + 1;
+    const contentObject =
+      3 + pages.length + i;
 
-    const content = buildPageContent(
-      pages[i],
-      i + 1,
-      pages.length
-    );
-
-    objects[pageNumber - 1] =
+    objects.push(
       `<< /Type /Page /Parent 2 0 R ` +
-      `/MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] ` +
-      `/Resources << /Font << /F1 ${fontRegularNumber} 0 R /F2 ${fontBoldNumber} 0 R >> >> ` +
-      `/Contents ${contentNumber} 0 R >>`;
-
-    objects[contentNumber - 1] =
-      `<< /Length ${content.length} >>\nstream\n${content}\nendstream`;
+        `/MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] ` +
+        `/Resources << /Font << /F1 ${
+          3 + pages.length * 2
+        } 0 R >> >> ` +
+        `/Contents ${contentObject} 0 R >>`
+    );
   }
 
-  let pdf = "%PDF-1.4\n%\xFF\xFF\xFF\xFF\n";
+  // 콘텐츠 객체
+  for (const pageContent of pages) {
+    const contentLength =
+      Buffer.byteLength(
+        pageContent,
+        "utf8"
+      );
+
+    objects.push(
+      `<< /Length ${contentLength} >>\n` +
+        `stream\n` +
+        `${pageContent}\n` +
+        `endstream`
+    );
+  }
+
+  const fontObject =
+    3 + pages.length * 2;
+
+  // Type0 font
+  objects.push(
+    `<< ` +
+      `/Type /Font ` +
+      `/Subtype /Type0 ` +
+      `/BaseFont /HYSMyeongJo-Medium ` +
+      `/Encoding /UniKS-UTF16-H ` +
+      `/DescendantFonts [${fontObject + 1} 0 R] ` +
+      `>>`
+  );
+
+  // CIDFont
+  objects.push(
+    `<< ` +
+      `/Type /Font ` +
+      `/Subtype /CIDFontType0 ` +
+      `/BaseFont /HYSMyeongJo-Medium ` +
+      `/CIDSystemInfo << ` +
+      `/Registry (Adobe) ` +
+      `/Ordering (Korea1) ` +
+      `/Supplement 2 ` +
+      `>> ` +
+      `/FontDescriptor ${fontObject + 2} 0 R ` +
+      `/DW 1000 ` +
+      `>>`
+  );
+
+  // FontDescriptor
+  objects.push(
+    `<< ` +
+      `/Type /FontDescriptor ` +
+      `/FontName /HYSMyeongJo-Medium ` +
+      `/Flags 4 ` +
+      `/FontBBox [-250 -250 1000 1000] ` +
+      `/ItalicAngle 0 ` +
+      `/Ascent 880 ` +
+      `/Descent -120 ` +
+      `/CapHeight 700 ` +
+      `/StemV 80 ` +
+      `>>`
+  );
+
+  return objects;
+}
+
+function buildPdf(
+  title: string,
+  allLines: string[]
+) {
+  const pages: string[][] = [];
+
+  let currentPage: string[] = [];
+
+  for (const line of allLines) {
+    if (
+      currentPage.length >=
+      MAX_LINES_PER_PAGE
+    ) {
+      pages.push(currentPage);
+      currentPage = [];
+    }
+
+    currentPage.push(line);
+  }
+
+  if (currentPage.length > 0) {
+    pages.push(currentPage);
+  }
+
+  if (pages.length === 0) {
+    pages.push([""]);
+  }
+
+  const totalPages = pages.length;
+
+  const pageContents = pages.map(
+    (pageLines, index) =>
+      buildPageContent(
+        title,
+        pageLines,
+        index + 1,
+        totalPages
+      )
+  );
+
+  const objects = makeObjects(
+    pageContents
+  );
+
+  const chunks: string[] = [
+    "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n",
+  ];
 
   const offsets: number[] = [0];
 
-  for (let i = 0; i < objects.length; i++) {
-    offsets.push(pdf.length);
+  for (
+    let i = 0;
+    i < objects.length;
+    i += 1
+  ) {
+    const objectNumber = i + 1;
 
-    pdf += `${i + 1} 0 obj\n`;
-    pdf += `${objects[i]}\n`;
-    pdf += "endobj\n";
+    offsets.push(
+      Buffer.byteLength(
+        chunks.join(""),
+        "binary"
+      )
+    );
+
+    chunks.push(
+      `${objectNumber} 0 obj\n`
+    );
+
+    chunks.push(objects[i]);
+
+    chunks.push("\nendobj\n");
   }
 
-  const xrefOffset = pdf.length;
+  const xrefOffset =
+    Buffer.byteLength(
+      chunks.join(""),
+      "binary"
+    );
 
-  pdf += `xref\n`;
-  pdf += `0 ${objects.length + 1}\n`;
-  pdf += `0000000000 65535 f \n`;
+  chunks.push(
+    `xref\n0 ${objects.length + 1}\n`
+  );
 
-  for (let i = 1; i < offsets.length; i++) {
-    pdf += `${String(offsets[i]).padStart(10, "0")} 00000 n \n`;
+  chunks.push(
+    "0000000000 65535 f \n"
+  );
+
+  for (
+    let i = 1;
+    i <= objects.length;
+    i += 1
+  ) {
+    chunks.push(
+      `${String(offsets[i]).padStart(
+        10,
+        "0"
+      )} 00000 n \n`
+    );
   }
 
-  pdf += "trailer\n";
-  pdf += `<< /Size ${objects.length + 1} /Root 1 0 R >>\n`;
-  pdf += "startxref\n";
-  pdf += `${xrefOffset}\n`;
-  pdf += "%%EOF";
+  chunks.push(
+    `trailer\n` +
+      `<< /Size ${
+        objects.length + 1
+      } /Root 1 0 R >>\n` +
+      `startxref\n` +
+      `${xrefOffset}\n` +
+      `%%EOF`
+  );
 
-  return new TextEncoder().encode(pdf);
+  return Buffer.from(
+    chunks.join(""),
+    "binary"
+  );
 }
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request
+) {
   try {
     const body = await request.json();
 
     const {
       result,
-      productName,
-      birthDate,
-      birthTime,
-      gender,
+      productName = "사주 분석",
+      birthDate = "",
+      birthTime = "",
+      gender = "",
     } = body;
 
-    if (!result || typeof result !== "string") {
+    if (
+      typeof result !== "string" ||
+      !result.trim()
+    ) {
       return NextResponse.json(
-        { error: "PDF로 변환할 분석 결과가 없습니다." },
+        {
+          error:
+            "PDF로 만들 분석 결과가 없습니다.",
+        },
         { status: 400 }
       );
     }
 
-    const lines = buildPdfLines({
-      result,
-      productName,
-      birthDate,
-      birthTime,
-      gender,
-    });
+    const title =
+      "AI 사주 분석 리포트";
 
-    const pages = makePages(lines);
+    const headerLines = [
+      `상품: ${String(productName)}`,
+      `생년월일: ${String(birthDate)}`,
+      `태어난 시간: ${String(birthTime)}`,
+      `성별: ${String(gender)}`,
+      "",
+      "━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+      "",
+    ];
 
-    const pdfBytes = buildPdf(pages);
+    const bodyLines =
+      makeTextLines(result);
 
-    const safeProductName =
-      typeof productName === "string"
-        ? productName.replace(/[\\/:*?"<>|]/g, "")
-        : "사주분석";
+    const footerLines = [
+      "",
+      "",
+      "━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+      "",
+      "※ 본 결과는 전통 사주 해석을 참고한 AI 콘텐츠이며 미래를 확정적으로 예측하지 않습니다.",
+    ];
 
-    const filename = `${safeProductName}_사주분석.pdf`;
+    const allLines = [
+      ...headerLines,
+      ...bodyLines,
+      ...footerLines,
+    ];
 
-    return new NextResponse(pdfBytes, {
+    const pdf = buildPdf(
+      title,
+      allLines
+    );
+
+    if (!pdf.length) {
+      throw new Error(
+        "PDF 데이터가 생성되지 않았습니다."
+      );
+    }
+
+    return new NextResponse(pdf, {
       status: 200,
       headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${encodeURIComponent(
-          filename
-        )}"`,
+        "Content-Type":
+          "application/pdf",
+        "Content-Disposition":
+          'attachment; filename="ai-saju-result.pdf"',
+        "Content-Length":
+          String(pdf.length),
+        "Cache-Control":
+          "no-store, no-cache, must-revalidate",
+        Pragma: "no-cache",
         "X-PDF-Generated": "true",
-        "Cache-Control": "no-store",
       },
     });
   } catch (error) {
-    console.error("ADMIN PDF ERROR:", error);
+    console.error(
+      "admin-pdf error:",
+      error
+    );
 
     return NextResponse.json(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "PDF 생성 중 오류가 발생했습니다.",
+          "PDF 생성 중 오류가 발생했습니다.",
       },
       { status: 500 }
     );
